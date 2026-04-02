@@ -10,6 +10,7 @@ import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_list_item.dart';
 import '../services/settings_service.dart';
+import '../services/ai_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -50,7 +51,8 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       budgets[cat] = await _settings.getCategoryBudget(uid, cat);
     }
 
-    _computeInsights(txns, cats, budgets);
+    final aiAnalysis = AIService.analyze(txns, isSample: txns.isEmpty);
+    _computeInsights(txns, cats, budgets, aiAnalysis);
 
     if (mounted) {
       setState(() {
@@ -63,36 +65,9 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
-  void _computeInsights(List<TransactionModel> txns, Map<String, double> cats, Map<String, double> budgets) {
-    final now = DateTime.now();
-    final thisWeekStart = now.subtract(Duration(days: now.weekday - 1));
-    final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
-
-    double thisWeekTotal = 0;
-    double lastWeekTotal = 0;
-
-    for (final t in txns) {
-      if (t.type == TransactionType.expense) {
-        if (t.date.isAfter(thisWeekStart)) {
-          thisWeekTotal += t.amount;
-        } else if (t.date.isAfter(lastWeekStart) && t.date.isBefore(thisWeekStart)) {
-          lastWeekTotal += t.amount;
-        }
-      }
-    }
-
-    if (thisWeekTotal > lastWeekTotal && lastWeekTotal > 0) {
-      final diff = ((thisWeekTotal - lastWeekTotal) / lastWeekTotal * 100).toStringAsFixed(0);
-      _insightText = "Your expenses increased by $diff% compared to last week.";
-      _insightColor = AppTheme.neonRed;
-    } else if (thisWeekTotal < lastWeekTotal && lastWeekTotal > 0) {
-      final diff = ((lastWeekTotal - thisWeekTotal) / lastWeekTotal * 100).toStringAsFixed(0);
-      _insightText = "Great job! You spent $diff% less than last week.";
-      _insightColor = AppTheme.neonGreen;
-    } else {
-      _insightText = "Your spending is stable compared to last week.";
-      _insightColor = AppTheme.neonBlue;
-    }
+  void _computeInsights(List<TransactionModel> txns, Map<String, double> cats, Map<String, double> budgets, AIAnalysis ai) {
+    _insightText = ai.insightMessage;
+    _insightColor = ai.isSpendingIncreasing ? AppTheme.neonPink : AppTheme.neonBlue;
 
     // Check category limits
     String? exceededCat;
@@ -354,7 +329,8 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (_) => AppTheme.bgCardLight,
-          tooltipRoundedRadius: 8,
+          // Removed deprecated tooltipRoundedRadius
+
           getTooltipItems: (touchedSpots) {
             return touchedSpots.map((s) {
               return LineTooltipItem(
@@ -457,7 +433,8 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       barTouchData: BarTouchData(
         touchTooltipData: BarTouchTooltipData(
           getTooltipColor: (_) => AppTheme.bgCardLight,
-          tooltipRoundedRadius: 8,
+          // Removed deprecated tooltipRoundedRadius
+
           getTooltipItem: (group, gIdx, rod, rIdx) {
             final name = entries[group.x].key;
             return BarTooltipItem(

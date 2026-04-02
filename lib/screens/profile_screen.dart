@@ -5,6 +5,9 @@ import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
 import 'export_report_screen.dart';
+import 'recurring_screen.dart';
+import 'calendar_screen.dart';
+import 'goal_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -15,7 +18,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   final _auth = AuthService();
   final _settings = SettingsService();
   bool _darkMode = true;
@@ -25,10 +29,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final _currencies = ['₹ INR', '\$ USD', '€ EUR', '£ GBP', '¥ JPY'];
 
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
+
   @override
   void initState() {
     super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -85,184 +104,246 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Profile',
-                style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary)),
-            const SizedBox(height: 4),
-            Text('Manage your account',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, color: AppTheme.textMuted)),
-            const SizedBox(height: 28),
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 100),
+          child: Column(
+            children: [
+              // ── Gradient Header with Profile ────────────────
+              _buildProfileHeader(),
 
-            // ── Profile card ─────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-                borderRadius: BorderRadius.circular(AppTheme.r20),
-                boxShadow: AppTheme.neonGlow(AppTheme.neonPurple,
-                    blur: 24),
+              // ── Quick Stats Row ─────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                child: _buildQuickStats(),
               ),
-              child: Row(children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Icon(Icons.person_rounded,
-                      color: Colors.white, size: 30),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Email',
-                          style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: Colors.white
-                                  .withValues(alpha: 0.7))),
-                      const SizedBox(height: 2),
-                      Text(_auth.userEmail,
-                          style: GoogleFonts.poppins(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white),
-                          overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-              ]),
+
+              // ── Feature Grid ────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                child: _buildFeatureGrid(),
+              ),
+
+              // ── Settings Section ────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                child: _buildSettingsSection(),
+              ),
+
+              // ── About Section ───────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                child: _buildAboutSection(),
+              ),
+
+              // ── Logout Button ───────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                child: _buildLogoutButton(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── PROFILE HEADER ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildProfileHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 32, 20, 36),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF6C5CE7),
+            Color(0xFF4834D4),
+            Color(0xFF00CEFF),
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(36),
+          bottomRight: Radius.circular(36),
+        ),
+      ),
+      child: Column(
+        children: [
+          // ── Title ──
+          Text(
+            'My Profile',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
             ),
-            const SizedBox(height: 28),
+          ),
+          const SizedBox(height: 24),
 
-            // ── Settings section ─────────────────────────
-            _section('Preferences'),
-            const SizedBox(height: 12),
-            _settingsCard([
-              _tile(
-                icon: Icons.dark_mode_rounded,
-                color: AppTheme.neonPurple,
-                title: 'Dark Mode',
-                subtitle: 'Enabled',
-                trailing: Switch.adaptive(
-                  value: _darkMode,
-                  onChanged: (v) async {
-                    setState(() => _darkMode = v);
-                    await _settings.setThemeMode(v);
-                    themeNotifier.value = v ? ThemeMode.dark : ThemeMode.light;
-                  },
-                  activeTrackColor: AppTheme.neonPurple,
-                  inactiveTrackColor:
-                      AppTheme.textMuted.withValues(alpha: 0.2),
+          // ── Avatar ──
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              child: const Icon(
+                Icons.person_rounded,
+                color: Colors.white,
+                size: 42,
               ),
-              _divider(),
-              _tile(
-                icon: Icons.account_balance_wallet_rounded,
-                color: AppTheme.neonBlue,
-                title: 'Monthly Budget',
-                subtitle: _monthlyBudget > 0 ? '₹$_monthlyBudget' : 'Not set',
-                trailing: const Icon(Icons.edit_rounded, color: AppTheme.textMuted, size: 18),
-                onTap: _showBudgetDialog,
-              ),
-              _divider(),
-              _tile(
-                icon: Icons.category_rounded,
-                color: AppTheme.neonOrange,
-                title: 'Category Limits',
-                subtitle: 'Manage spending per category',
-                trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 20),
-                onTap: _showCategoryLimitsSheet,
-              ),
-              _divider(),
-              _tile(
-                icon: Icons.currency_exchange_rounded,
-                color: AppTheme.neonGreen,
-                title: 'Currency',
-                subtitle: _currency,
-                trailing: const Icon(Icons.chevron_right_rounded,
-                    color: AppTheme.textMuted, size: 20),
-                onTap: _showCurrencyPicker,
-              ),
-              _divider(),
-              _tile(
-                icon: Icons.notifications_rounded,
-                color: AppTheme.neonOrange,
-                title: 'Notifications',
-                subtitle: _notifications ? 'On' : 'Off',
-                trailing: Switch.adaptive(
-                  value: _notifications,
-                  onChanged: (v) =>
-                      setState(() => _notifications = v),
-                  activeTrackColor: AppTheme.neonOrange,
-                  inactiveTrackColor:
-                      AppTheme.textMuted.withValues(alpha: 0.2),
-                ),
-              ),
-              _divider(),
-              _tile(
-                icon: Icons.picture_as_pdf_rounded,
-                color: AppTheme.neonRed,
-                title: 'Export Report',
-                subtitle: 'Generate monthly PDF report',
-                trailing: const Icon(Icons.download_rounded, color: AppTheme.textMuted, size: 20),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExportReportScreen())),
-              ),
-            ]),
-            const SizedBox(height: 28),
+            ),
+          ),
+          const SizedBox(height: 16),
 
-            _section('About'),
-            const SizedBox(height: 12),
-            _settingsCard([
-              _tile(
-                icon: Icons.info_outline_rounded,
-                color: AppTheme.neonBlue,
-                title: 'App Version',
-                subtitle: '2.0.0',
-                trailing: const SizedBox(),
-              ),
-              _divider(),
-              _tile(
-                icon: Icons.code_rounded,
-                color: AppTheme.neonPink,
-                title: 'Built with',
-                subtitle: 'Flutter & Dart',
-                trailing: const SizedBox(),
-              ),
-            ]),
-            const SizedBox(height: 28),
+          // ── Name ──
+          Text(
+            'SmartSpend User',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
 
-            // ── Logout ───────────────────────────────────
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _logout,
-                icon: const Icon(Icons.logout_rounded, size: 20),
-                label: Text('Logout',
-                    style: GoogleFonts.poppins(
-                        fontSize: 15, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      AppTheme.neonRed.withValues(alpha: 0.12),
-                  foregroundColor: AppTheme.neonRed,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.r16)),
-                ),
+          // ── Email ──
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _auth.userEmail,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Tagline ──
+          Text(
+            'Track smart. Spend wise. Save more.',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              fontStyle: FontStyle.italic,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── QUICK STATS ───────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildQuickStats() {
+    return Row(
+      children: [
+        _statCard(
+          icon: Icons.account_balance_wallet_rounded,
+          label: 'Budget',
+          value: _monthlyBudget > 0
+              ? '₹${_monthlyBudget.toStringAsFixed(0)}'
+              : 'Not set',
+          color: AppTheme.neonBlue,
+        ),
+        const SizedBox(width: 12),
+        _statCard(
+          icon: Icons.currency_exchange_rounded,
+          label: 'Currency',
+          value: _currency.split(' ').first,
+          color: AppTheme.neonGreen,
+        ),
+        const SizedBox(width: 12),
+        _statCard(
+          icon: Icons.palette_rounded,
+          label: 'Theme',
+          value: _darkMode ? 'Dark' : 'Light',
+          color: AppTheme.neonPurple,
+        ),
+      ],
+    );
+  }
+
+  Widget _statCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(AppTheme.r20),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textMuted,
               ),
             ),
           ],
@@ -271,13 +352,450 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // ── FEATURE GRID ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildFeatureGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader('Quick Actions', Icons.bolt_rounded),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            _featureCard(
+              icon: Icons.account_balance_wallet_rounded,
+              label: 'Budget',
+              subtitle: 'Set monthly',
+              gradient: const [Color(0xFF00D4FF), Color(0xFF0097E6)],
+              onTap: _showBudgetDialog,
+            ),
+            const SizedBox(width: 12),
+            _featureCard(
+              icon: Icons.category_rounded,
+              label: 'Categories',
+              subtitle: 'Set limits',
+              gradient: const [Color(0xFFFF9100), Color(0xFFFF6D00)],
+              onTap: _showCategoryLimitsSheet,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _featureCard(
+              icon: Icons.repeat_rounded,
+              label: 'Recurring',
+              subtitle: 'Auto expenses',
+              gradient: const [Color(0xFFE040FB), Color(0xFFAB47BC)],
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RecurringScreen()),
+              ),
+            ),
+            const SizedBox(width: 12),
+            _featureCard(
+              icon: Icons.picture_as_pdf_rounded,
+              label: 'Export',
+              subtitle: 'PDF report',
+              gradient: const [Color(0xFFFF5252), Color(0xFFD32F2F)],
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ExportReportScreen()),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _featureCard(
+              icon: Icons.calendar_month_rounded,
+              label: 'Calendar',
+              subtitle: 'Spending map',
+              gradient: const [Color(0xFF00E676), Color(0xFF00C853)],
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CalendarScreen()),
+              ),
+            ),
+            const SizedBox(width: 12),
+            _featureCard(
+              icon: Icons.flag_rounded,
+              label: 'Savings',
+              subtitle: 'Set goals',
+              gradient: const [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GoalScreen()),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _featureCard({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                gradient[0].withValues(alpha: 0.15),
+                gradient[1].withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.r20),
+            border: Border.all(
+              color: gradient[0].withValues(alpha: 0.2),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: gradient),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: gradient[0].withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── SETTINGS SECTION ──────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildSettingsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader('Settings', Icons.settings_rounded),
+        const SizedBox(height: 14),
+        _settingsCard([
+          _tile(
+            icon: Icons.dark_mode_rounded,
+            color: AppTheme.neonPurple,
+            title: 'Dark Mode',
+            subtitle: _darkMode ? 'Enabled' : 'Disabled',
+            trailing: Switch.adaptive(
+              value: _darkMode,
+              onChanged: (v) async {
+                setState(() => _darkMode = v);
+                await _settings.setThemeMode(v);
+                themeNotifier.value = v ? ThemeMode.dark : ThemeMode.light;
+              },
+              activeTrackColor: AppTheme.neonPurple,
+              inactiveTrackColor: AppTheme.textMuted.withValues(alpha: 0.2),
+            ),
+          ),
+          _divider(),
+          _tile(
+            icon: Icons.notifications_rounded,
+            color: AppTheme.neonOrange,
+            title: 'Notifications',
+            subtitle: _notifications ? 'On' : 'Off',
+            trailing: Switch.adaptive(
+              value: _notifications,
+              onChanged: (v) => setState(() => _notifications = v),
+              activeTrackColor: AppTheme.neonOrange,
+              inactiveTrackColor: AppTheme.textMuted.withValues(alpha: 0.2),
+            ),
+          ),
+          _divider(),
+          _tile(
+            icon: Icons.currency_exchange_rounded,
+            color: AppTheme.neonGreen,
+            title: 'Currency',
+            subtitle: _currency,
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.textMuted, size: 20),
+            onTap: _showCurrencyPicker,
+          ),
+        ]),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── ABOUT SECTION ─────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildAboutSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader('About', Icons.info_outline_rounded),
+        const SizedBox(height: 14),
+
+        // ── Description Card ──
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppTheme.bgCard,
+            borderRadius: BorderRadius.circular(AppTheme.r16),
+            border:
+                Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'SmartSpend',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.neonGreen.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'v2.0.0',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.neonGreen,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Your AI-powered expense tracker that helps you manage finances, '
+                'set budgets, track recurring payments, and get smart insights — '
+                'all in one beautiful app.',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  height: 1.6,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Divider(
+                  color: AppTheme.textMuted.withValues(alpha: 0.1), height: 1),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _aboutChip(Icons.code_rounded, 'Flutter & Dart'),
+                  const SizedBox(width: 8),
+                  _aboutChip(Icons.bolt_rounded, 'AI Powered'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _aboutChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCardLight,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppTheme.neonBlue),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── LOGOUT BUTTON ─────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildLogoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton.icon(
+        onPressed: _logout,
+        icon: const Icon(Icons.logout_rounded, size: 20),
+        label: Text('Logout',
+            style:
+                GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.neonRed.withValues(alpha: 0.1),
+          foregroundColor: AppTheme.neonRed,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.r16),
+            side: BorderSide(
+              color: AppTheme.neonRed.withValues(alpha: 0.2),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ── SHARED HELPERS ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  Widget _sectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: AppTheme.neonBlue, size: 18),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _settingsCard(List<Widget> children) => Container(
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(AppTheme.r16),
+          border:
+              Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
+        ),
+        child: Column(children: children),
+      );
+
+  Widget _tile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.r16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary)),
+                const SizedBox(height: 1),
+                Text(subtitle,
+                    style: GoogleFonts.poppins(
+                        fontSize: 11, color: AppTheme.textMuted)),
+              ],
+            ),
+          ),
+          trailing,
+        ]),
+      ),
+    );
+  }
+
+  Widget _divider() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Divider(
+            height: 1, color: AppTheme.textMuted.withValues(alpha: 0.1)),
+      );
+
+  // ═══════════════════════════════════════════════════════════
+  // ── DIALOGS & SHEETS (LOGIC UNCHANGED) ────────────────────
+  // ═══════════════════════════════════════════════════════════
+
   void _showCurrencyPicker() {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.bgCard,
       shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -332,75 +850,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
-  Widget _section(String t) => Text(t,
-      style: GoogleFonts.poppins(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: AppTheme.textSecondary));
-
-  Widget _settingsCard(List<Widget> children) => Container(
-        decoration: BoxDecoration(
-          color: AppTheme.bgCard,
-          borderRadius: BorderRadius.circular(AppTheme.r16),
-          border: Border.all(
-              color: AppTheme.textMuted.withValues(alpha: 0.1)),
-        ),
-        child: Column(children: children),
-      );
-
-  Widget _tile({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String subtitle,
-    required Widget trailing,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppTheme.r16),
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary)),
-                Text(subtitle,
-                    style: GoogleFonts.poppins(
-                        fontSize: 11, color: AppTheme.textMuted)),
-              ],
-            ),
-          ),
-          trailing,
-        ]),
-      ),
-    );
-  }
-
-  Widget _divider() => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Divider(
-            height: 1,
-            color: AppTheme.textMuted.withValues(alpha: 0.1)),
-      );
 
   void _showBudgetDialog() {
     final ctrl = TextEditingController(text: _monthlyBudget > 0 ? _monthlyBudget.toStringAsFixed(0) : '');

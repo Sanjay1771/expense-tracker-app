@@ -12,12 +12,20 @@ import 'widgets/glowing_fab.dart';
 import 'models/friend_model.dart';
 import 'services/friend_service.dart';
 import 'services/settings_service.dart';
+import 'services/notification_service.dart';
+import 'services/background_service.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize notifications early so they're ready before any screen loads
+  await NotificationService().initialize();
+
+  // Initialize WorkManager for background recurring transaction checks
+  await BackgroundService.initialize();
+
   final settings = SettingsService();
   final isDark = await settings.getThemeMode();
   themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;

@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
+import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -26,6 +28,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
   final _categoryDescCtrl = TextEditingController(); // mini-note for detail categories
   final _db = DatabaseService();
   final _auth = AuthService();
+  final _notify = NotificationService();
 
   TransactionType _type = TransactionType.expense;
   Category? _category;
@@ -127,15 +130,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
       finalNote = _noteCtrl.text.trim();
     }
 
+    final amount = double.parse(_amountCtrl.text);
+    final categoryName = _category!.name;
+
     await _db.insertTransaction(TransactionModel(
-      title: _category!.name,
-      amount: double.parse(_amountCtrl.text),
-      category: _category!.name,
+      title: categoryName,
+      amount: amount,
+      category: categoryName,
       date: _date,
       note: finalNote,
       type: _type,
       userId: _auth.userId,
     ));
+
+    // ── Real-time Smart Notifications ───────────────────────
+    await _triggerSmartNotifications(amount, categoryName);
 
     if (mounted) {
       setState(() => _saving = false);
@@ -162,6 +171,82 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
       // Small delay so user sees the snackbar, then auto-navigate home
       await Future.delayed(const Duration(milliseconds: 400));
       if (mounted) Navigator.pop(context);
+    }
+  }
+
+  /// Trigger real-time smart notifications based on the transaction just added
+  Future<void> _triggerSmartNotifications(double amount, String category) async {
+    final uid = _auth.userId;
+
+    // 1️⃣ Expense Added — immediate confirmation
+    if (_type == TransactionType.expense) {
+      await _notify.showNotification(
+        id: 10,
+        title: 'Expense Added \u{1F4B8}',
+        body: '₹${amount.toStringAsFixed(0)} added to $category',
+      );
+
+      // 2️⃣ Budget Limit Alert — compare this month's expense against actual budget
+      final allTxns = await _db.getTransactions(uid);
+      final now = DateTime.now();
+      final monthlyExpense = allTxns
+          .where((t) =>
+              t.type == TransactionType.expense &&
+              t.date.month == now.month &&
+              t.date.year == now.year)
+          .fold(0.0, (sum, t) => sum + t.amount);
+
+      final userBudget = await SettingsService().getMonthlyBudget(uid);
+
+      // 2️⃣ Multi-level Budget Alert — 70% / 85% / 100%
+      if (userBudget > 0) {
+        final budgetRatio = monthlyExpense / userBudget;
+        if (budgetRatio >= 1.0) {
+          await _notify.showNotification(
+            id: 11,
+            title: 'Budget Exceeded \u{1F6A8}',
+            body: 'You\'ve spent ₹${monthlyExpense.toStringAsFixed(0)} — ${(budgetRatio * 100).toStringAsFixed(0)}% of your ₹${userBudget.toStringAsFixed(0)} budget!',
+          );
+        } else if (budgetRatio >= 0.85) {
+          await _notify.showNotification(
+            id: 11,
+            title: 'Budget Alert \u{26A0}\u{FE0F} 85%+',
+            body: 'You\'ve used ${(budgetRatio * 100).toStringAsFixed(0)}% of your ₹${userBudget.toStringAsFixed(0)} monthly budget. Slow down!',
+          );
+        } else if (budgetRatio >= 0.7) {
+          await _notify.showNotification(
+            id: 11,
+            title: 'Budget Update \u{1F4CA} 70%+',
+            body: 'You\'ve used ${(budgetRatio * 100).toStringAsFixed(0)}% of your monthly budget.',
+          );
+        }
+      }
+
+      // 3️⃣ Dynamic Daily Spending Alert — uses budget/30 or fallback ₹1,000
+      final today = DateTime.now();
+      final todayTotal = allTxns
+          .where((t) =>
+              t.type == TransactionType.expense &&
+              t.date.year == today.year &&
+              t.date.month == today.month &&
+              t.date.day == today.day)
+          .fold(0.0, (sum, t) => sum + t.amount);
+
+      final dailyLimit = userBudget > 0 ? userBudget / 30 : 1000.0;
+      if (todayTotal > dailyLimit) {
+        await _notify.showNotification(
+          id: 12,
+          title: 'High Spending Today \u{1F6A8}',
+          body: '₹${todayTotal.toStringAsFixed(0)} spent today (daily limit: ₹${dailyLimit.toStringAsFixed(0)}).',
+        );
+      }
+    } else {
+      // Income added — positive feedback
+      await _notify.showNotification(
+        id: 13,
+        title: 'Income Added \u{1F4B0}',
+        body: '₹${amount.toStringAsFixed(0)} received from $category',
+      );
     }
   }
 

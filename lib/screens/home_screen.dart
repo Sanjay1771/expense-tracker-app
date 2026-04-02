@@ -13,6 +13,12 @@ import 'transfer_screen.dart';
 import '../services/settings_service.dart';
 import '../models/bill_reminder_model.dart';
 import 'package:intl/intl.dart';
+import '../services/ai_service.dart';
+import 'ai_chat_screen.dart';
+import '../services/notification_service.dart';
+import '../services/recurring_service.dart';
+
+import '../widgets/dashboard_widgets.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,16 +34,26 @@ class HomeScreenState extends State<HomeScreen> {
   double _totalIncome = 0;
   double _totalExpense = 0;
   bool _isLoading = true;
+  AIAnalysis? _aiAnalysis;
 
   // Defines the current filter constraint
   TransactionType? _currentFilter;
   double _monthlyBudget = 0;
   List<BillReminder> _reminders = [];
   final _settings = SettingsService();
+  final _notify = NotificationService();
+
+  double _weeklyIncome = 0;
+  double _weeklyExpense = 0;
+  double _monthlyIncome = 0;
+  double _monthlyExpense = 0;
+  bool _hasCheckedNotifications = false;
+
 
   @override
   void initState() {
     super.initState();
+    _notify.initialize();
     loadData();
   }
 
@@ -45,6 +61,10 @@ class HomeScreenState extends State<HomeScreen> {
   Future<void> loadData() async {
     setState(() => _isLoading = true);
     final uid = _auth.userId;
+
+    // Check and add any due recurring transactions before loading
+    await RecurringService().checkDueTransactions(uid);
+
     final txns = await _db.getTransactions(uid);
     final inc = await _db.getTotalIncome(uid);
     final exp = await _db.getTotalExpense(uid);
@@ -52,15 +72,89 @@ class HomeScreenState extends State<HomeScreen> {
     final reminderMaps = await _db.getReminders(uid);
     final reminders = reminderMaps.map((m) => BillReminder.fromMap(m)).toList();
     
+    // Weekly/Monthly stats
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    
+    double weeklyInc = 0, weeklyExp = 0, monthlyInc = 0, monthlyExp = 0;
+    for (var t in txns) {
+      if (t.date.isAfter(sevenDaysAgo)) {
+        if (t.type == TransactionType.income) weeklyInc += t.amount;
+        else weeklyExp += t.amount;
+      }
+      if (t.date.month == now.month && t.date.year == now.year) {
+        if (t.type == TransactionType.income) monthlyInc += t.amount;
+        else monthlyExp += t.amount;
+      }
+    }
+
     if (mounted) {
+      // Analyze real data with AI service
+      final analysis = AIService.analyze(txns);
+
       setState(() {
         _transactions = txns;
         _totalIncome = inc;
         _totalExpense = exp;
         _monthlyBudget = budget;
         _reminders = reminders;
+        _aiAnalysis = analysis;
+        
+        _weeklyIncome = weeklyInc;
+        _weeklyExpense = weeklyExp;
+        _monthlyIncome = monthlyInc;
+        _monthlyExpense = monthlyExp;
+        
         _isLoading = false;
       });
+
+      _checkSmartNotifications();
+    }
+  }
+
+  void _checkSmartNotifications() {
+    // Only check once per session to avoid spam on every refresh
+    if (_hasCheckedNotifications) return;
+    _hasCheckedNotifications = true;
+
+    // ── Multi-level budget alerts (70% / 85% / 100%) ──
+    if (_monthlyBudget > 0) {
+      final budgetRatio = _monthlyExpense / _monthlyBudget;
+      if (budgetRatio >= 1.0) {
+        _notify.showNotification(
+          id: 1,
+          title: '🚨 Budget Exceeded!',
+          body: 'You\'ve spent ₹${_monthlyExpense.toStringAsFixed(0)} — ${(budgetRatio * 100).toStringAsFixed(0)}% of your ₹${_monthlyBudget.toStringAsFixed(0)} budget!',
+        );
+      } else if (budgetRatio >= 0.85) {
+        _notify.showNotification(
+          id: 1,
+          title: '⚠️ Budget Alert — 85%+',
+          body: 'You\'ve used ${(budgetRatio * 100).toStringAsFixed(0)}% of your budget. Slow down!',
+        );
+      } else if (budgetRatio >= 0.7) {
+        _notify.showNotification(
+          id: 1,
+          title: '📊 Budget Update — 70%+',
+          body: 'You\'ve used ${(budgetRatio * 100).toStringAsFixed(0)}% of your monthly budget.',
+        );
+      }
+    }
+
+    // ── Dynamic daily spending alert ──
+    // Uses monthlyBudget / 30 as daily limit; falls back to ₹1,500 if no budget set
+    final today = DateTime.now();
+    final todayExp = _transactions
+        .where((t) => t.type == TransactionType.expense && t.date.year == today.year && t.date.month == today.month && t.date.day == today.day)
+        .fold(0.0, (sum, t) => sum + t.amount);
+
+    final dailyLimit = _monthlyBudget > 0 ? _monthlyBudget / 30 : 1500.0;
+    if (todayExp > dailyLimit) {
+      _notify.showNotification(
+        id: 2,
+        title: '💸 High Spending Today',
+        body: 'You\'ve spent ₹${todayExp.toStringAsFixed(0)} today (daily limit: ₹${dailyLimit.toStringAsFixed(0)}).',
+      );
     }
   }
 
@@ -104,6 +198,18 @@ class HomeScreenState extends State<HomeScreen> {
       // Refresh transactions in case friendly transfers were inserted
       loadData();
     });
+  }
+
+  void _openAIChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AIChatScreen(
+          transactions: _transactions,
+          balance: _totalIncome - _totalExpense,
+        ),
+      ),
+    );
   }
 
   @override
@@ -162,23 +268,31 @@ class HomeScreenState extends State<HomeScreen> {
                                 ),
                               ],
                             ),
-                            // Notifications bell
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppTheme.bgCardLight,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: AppTheme.textMuted
-                                      .withValues(alpha: 0.15),
+                            // AI Chat and Notifications
+                            Row(
+                              children: [
+
+                                GestureDetector(
+                                  onTap: _openAIChat,
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    margin: const EdgeInsets.only(right: 10),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.neonBlue.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: AppTheme.neonBlue.withValues(alpha: 0.2),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      color: AppTheme.neonBlue,
+                                      size: 20,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              child: const Icon(
-                                Icons.notifications_none_rounded,
-                                color: AppTheme.textSecondary,
-                                size: 22,
-                              ),
+                              ],
                             ),
                           ],
                         ),
@@ -234,7 +348,17 @@ class HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 28),
                         ],
 
-                        // ── Section header ───────────────────────
+                        // ── AI Insights Card ─────────────────────
+                        if (_aiAnalysis != null) ...[
+                          _buildAIInsightsCard(),
+                          const SizedBox(height: 28),
+                        ],
+
+                        // ── Advanced Dashboard Section ──────────
+                        _buildAdvancedDashboard(),
+                        const SizedBox(height: 28),
+
+                        // ── Recent Transactions Section header ──
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -457,7 +581,7 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBudgetProgress() {
-    final progress = (_totalExpense / _monthlyBudget).clamp(0.0, 1.0);
+    final progress = (_monthlyExpense / _monthlyBudget).clamp(0.0, 1.0);
     final isWarning = progress >= 0.8;
     final isAlert = progress >= 1.0;
     final color = isAlert ? AppTheme.neonRed : (isWarning ? AppTheme.neonOrange : AppTheme.neonBlue);
@@ -508,7 +632,7 @@ class HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '₹${_totalExpense.toStringAsFixed(0)} / ₹${_monthlyBudget.toStringAsFixed(0)}',
+                '₹${_monthlyExpense.toStringAsFixed(0)} / ₹${_monthlyBudget.toStringAsFixed(0)}',
                 style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary),
               ),
               if (isAlert)
@@ -619,4 +743,213 @@ class HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+
+  Widget _buildAIInsightsCard() {
+    if (_aiAnalysis == null) return const SizedBox();
+
+    final isIncreasing = _aiAnalysis!.isSpendingIncreasing;
+    final accentColor = isIncreasing ? AppTheme.neonPink : AppTheme.neonPurple;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(AppTheme.r20),
+          border: Border.all(
+            color: accentColor.withValues(alpha: 0.15),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withValues(alpha: 0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.auto_awesome_rounded,
+                        color: accentColor,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Smart AI Analysis',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Prediction Section
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Monthly Prediction',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${_aiAnalysis!.predictedNextMonth.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isIncreasing ? AppTheme.neonRed : AppTheme.neonGreen)
+                        .withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isIncreasing
+                        ? Icons.trending_up_rounded
+                        : Icons.trending_down_rounded,
+                    color: isIncreasing ? AppTheme.neonRed : AppTheme.neonGreen,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 18),
+            Divider(color: AppTheme.textMuted.withValues(alpha: 0.08), height: 1),
+            const SizedBox(height: 18),
+
+            // Detailed Analysis Points
+            _insightRow(
+              icon: Icons.category_rounded,
+              color: AppTheme.neonBlue,
+              text: _aiAnalysis!.highestCategory,
+            ),
+            const SizedBox(height: 12),
+            _insightRow(
+              icon: Icons.speed_rounded,
+              color: AppTheme.neonOrange,
+              text: _aiAnalysis!.weeklyTrend,
+            ),
+            const SizedBox(height: 12),
+            _insightRow(
+              icon: Icons.lightbulb_outline_rounded,
+              color: AppTheme.neonYellow,
+              text: _aiAnalysis!.smartSuggestion,
+              isSuggestion: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _insightRow({
+    required IconData icon,
+    required Color color,
+    required String text,
+    bool isSuggestion = false,
+  }) {
+    if (text == "None" || text == "Stable") return const SizedBox();
+    
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 14),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: isSuggestion ? FontWeight.w600 : FontWeight.w500,
+              color: isSuggestion ? AppTheme.textPrimary : AppTheme.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  Widget _buildAdvancedDashboard() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DashboardSummary(
+          weeklyIncome: _weeklyIncome,
+          weeklyExpense: _weeklyExpense,
+          monthlyIncome: _monthlyIncome,
+          monthlyExpense: _monthlyExpense,
+        ),
+        
+        const SizedBox(height: 24),
+        Text(
+          'Weekly Spend Trend',
+          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 12),
+        TrendLineChart(transactions: _transactions),
+        
+        const SizedBox(height: 24),
+        Text(
+          'Expense Distribution',
+          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 12),
+        CategoryBarChart(transactions: _transactions),
+      ],
+    );
+  }
+
 }

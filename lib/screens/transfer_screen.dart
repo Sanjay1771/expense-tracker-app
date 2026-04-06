@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../models/friend_model.dart';
 import '../models/transaction_model.dart';
+import '../models/friend_transaction_model.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/friend_service.dart';
@@ -27,7 +28,7 @@ class _TransferScreenState extends State<TransferScreen>
   final _auth = AuthService();
 
   List<FriendModel> _friends = [];
-  List<TransactionModel> _transfers = [];
+  List<FriendTransactionModel> _transfers = [];
   List<Map<String, dynamic>> _debts = [];
   double _totalYouOwe = 0;
   double _totalOwedToYou = 0;
@@ -60,14 +61,9 @@ class _TransferScreenState extends State<TransferScreen>
   Future<void> _loadData() async {
     final uid = _auth.userId;
     final friends = await _friendSvc.getFriends(uid);
-    final allTx = await _db.getTransactions(uid);
     
-    // Filter transactions linked to friends (via title and note tag)
-    final transfers = allTx.where((t) => 
-      t.title == 'Transfer' && 
-      t.note != null && 
-      t.note!.startsWith('Friend: ')
-    ).toList();
+    // Fetch directly from separated FriendService system
+    final transfers = await _friendSvc.getFriendTransactions(uid);
 
     final debts = await _friendSvc.getDebts(uid);
     double youOwe = 0;
@@ -214,16 +210,15 @@ class _TransferScreenState extends State<TransferScreen>
                     final amt = double.tryParse(amountCtrl.text);
                     if (amt == null || amt <= 0) return;
                     
-                    final fullNote = 'Friend: ${friend.name}${noteCtrl.text.isNotEmpty ? " — ${noteCtrl.text}" : ""}';
+                    final fullNote = noteCtrl.text.isNotEmpty ? noteCtrl.text : null;
                     
-                    // Saved directly as a standard transaction
-                    await _db.insertTransaction(TransactionModel(
-                      title: 'Transfer',
+                    // Saved cleanly to friend transactions table, no mixing with personal expenses!
+                    await _friendSvc.addFriendTransaction(FriendTransactionModel(
+                      friendName: friend.name,
                       amount: amt,
-                      category: 'Other',
+                      type: direction,
                       date: DateTime.now(),
                       note: fullNote,
-                      type: direction == 'given' ? TransactionType.expense : TransactionType.income,
                       userId: _auth.userId,
                     ));
 
@@ -448,13 +443,12 @@ class _TransferScreenState extends State<TransferScreen>
                         _emptyState(Icons.swap_horiz_rounded, 'No transfers yet')
                       else
                         ...List.generate(_transfers.length, (i) {
-                          // Standard Tile for our transfers! They are real transactions.
                           return AnimatedListItem(
                             index: i,
-                            child: TransactionTile(
-                              transaction: _transfers[i],
-                              onDelete: () async {
-                                await _db.deleteTransaction(_transfers[i].id!);
+                            child: _friendTransactionTile(
+                              _transfers[i],
+                              () async {
+                                await _friendSvc.deleteFriendTransaction(_transfers[i].id!);
                                 _loadData();
                               },
                             ),
@@ -515,6 +509,64 @@ class _TransferScreenState extends State<TransferScreen>
                 style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: color)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _friendTransactionTile(FriendTransactionModel tx, VoidCallback onDelete) {
+    final isIncome = tx.isReceived;
+    final amountColor = isIncome ? AppTheme.neonGreen : AppTheme.neonRed;
+    final prefix = isIncome ? '+' : '-';
+    final actionLabel = isIncome ? 'Received from' : 'Sent to';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(AppTheme.r16),
+        border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46, height: 46,
+            decoration: BoxDecoration(
+              color: amountColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, color: amountColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$actionLabel ${tx.friendName}',
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                ),
+                if (tx.note != null && tx.note!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(tx.note!, style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('$prefix₹${tx.amount.toStringAsFixed(0)}',
+                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: amountColor)),
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: onDelete,
+                child: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.textMuted),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

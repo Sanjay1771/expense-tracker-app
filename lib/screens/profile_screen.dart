@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
@@ -7,7 +8,7 @@ import '../main.dart';
 import 'export_report_screen.dart';
 import 'recurring_screen.dart';
 import 'calendar_screen.dart';
-import 'goal_screen.dart';
+import 'calendar_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -236,7 +237,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              _auth.userEmail,
+              FirebaseAuth.instance.currentUser == null
+                  ? 'No user logged in'
+                  : FirebaseAuth.instance.currentUser?.email ?? 'Email not available',
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -417,17 +420,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const CalendarScreen()),
-              ),
-            ),
-            const SizedBox(width: 12),
-            _featureCard(
-              icon: Icons.flag_rounded,
-              label: 'Savings',
-              subtitle: 'Set goals',
-              gradient: const [Color(0xFF7C3AED), Color(0xFF5B21B6)],
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const GoalScreen()),
               ),
             ),
           ],

@@ -2,6 +2,7 @@
 // Friend transfers themselves are stored as standard Transactions!
 import 'package:sqflite/sqflite.dart';
 import '../models/friend_model.dart';
+import '../models/friend_transaction_model.dart';
 import 'database_service.dart';
 
 class FriendService {
@@ -37,6 +38,19 @@ class FriendService {
         date TEXT NOT NULL,
         user_id INTEGER NOT NULL,
         FOREIGN KEY (friend_id) REFERENCES friends(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS friend_transactions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        friend_name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL, -- 'given' or 'received'
+        date TEXT NOT NULL,
+        note TEXT,
+        user_id INTEGER NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     ''');
@@ -103,5 +117,33 @@ class FriendService {
     await ensureFriendTables();
     final db = await DatabaseService().database;
     return await db.delete('friend_debts', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ─────────────────────────────────────────────────────
+  //  FRIEND TRANSACTIONS CRUD (Separate from main)
+  // ─────────────────────────────────────────────────────
+
+  Future<int> addFriendTransaction(FriendTransactionModel ft) async {
+    await ensureFriendTables();
+    final db = await DatabaseService().database;
+    return await db.insert('friend_transactions', ft.toMap());
+  }
+
+  Future<List<FriendTransactionModel>> getFriendTransactions(int userId) async {
+    await ensureFriendTables();
+    final db = await DatabaseService().database;
+    final maps = await db.query(
+      'friend_transactions',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'date DESC',
+    );
+    return maps.map((m) => FriendTransactionModel.fromMap(m)).toList();
+  }
+
+  Future<int> deleteFriendTransaction(int id) async {
+    await ensureFriendTables();
+    final db = await DatabaseService().database;
+    return await db.delete('friend_transactions', where: 'id = ?', whereArgs: [id]);
   }
 }

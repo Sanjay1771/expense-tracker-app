@@ -1,6 +1,8 @@
 // Main entry point — dark theme, auth flow, swipeable 3-tab nav with glowing FAB
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
@@ -19,6 +21,9 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase FIRST
+  await Firebase.initializeApp();
   
   // Initialize notifications early so they're ready before any screen loads
   await NotificationService().initialize();
@@ -58,7 +63,7 @@ class ExpenseTrackerApp extends StatelessWidget {
   }
 }
 
-/// Checks login state → shows splash, login, or dashboard
+/// Checks login state natively via Firebase Auth with safe null handling
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
   @override
@@ -73,20 +78,43 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    _check();
+    _checkAuth();
   }
 
-  Future<void> _check() async {
-    final ok = await _auth.tryAutoLogin();
-    if (mounted) setState(() { _loggedIn = ok; _loading = false; });
+  Future<void> _checkAuth() async {
+    // 1. SAFELY check Firebase currentUser (MANDATORY NULL CHECK)
+    final User? firebaseUser = FirebaseAuth.instance.currentUser;
+    
+    // 2. If user == null -> Navigate to Login
+    if (firebaseUser == null) {
+      if (mounted) setState(() { _loggedIn = false; _loading = false; });
+      return;
+    }
+
+    // 3. User != null -> Safely synchronize our local SQLite dependencies so app doesn't crash
+    try {
+      final ok = await _auth.tryAutoLogin();
+      if (!ok) {
+        // If SharedPreferences was cleared but Firebase is active, re-sync locally safely
+        await _auth.register(firebaseUser.email ?? 'unknown', 'sync123');
+      }
+      if (mounted) setState(() { _loggedIn = true; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _loggedIn = false; _loading = false; });
+    }
   }
 
   void _onLogin() => setState(() => _loggedIn = true);
-  void _onLogout() => setState(() => _loggedIn = false);
+  
+  void _onLogout() async {
+    await FirebaseAuth.instance.signOut(); // Ensure Firebase session clears
+    setState(() => _loggedIn = false);
+  }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return _splash();
+    // Safe Navigation Routing
     if (!_loggedIn) return LoginScreen(onLoginSuccess: _onLogin);
     return MainNavigation(onLogout: _onLogout);
   }

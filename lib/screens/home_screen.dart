@@ -49,7 +49,6 @@ class HomeScreenState extends State<HomeScreen> {
   double _monthlyExpense = 0;
   bool _hasCheckedNotifications = false;
 
-
   @override
   void initState() {
     super.initState();
@@ -311,6 +310,8 @@ class HomeScreenState extends State<HomeScreen> {
                           _buildBudgetProgress(),
                           const SizedBox(height: 24),
                         ],
+
+                        const SizedBox(height: 24),
 
                         // ── Quick Action Buttons (now active toggles) ──
                         Row(
@@ -932,22 +933,6 @@ class HomeScreenState extends State<HomeScreen> {
           monthlyIncome: _monthlyIncome,
           monthlyExpense: _monthlyExpense,
         ),
-        
-        const SizedBox(height: 24),
-        Text(
-          'Weekly Spend Trend',
-          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
-        ),
-        const SizedBox(height: 12),
-        TrendLineChart(transactions: _transactions),
-        
-        const SizedBox(height: 24),
-        Text(
-          'Expense Distribution',
-          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
-        ),
-        const SizedBox(height: 12),
-        CategoryBarChart(transactions: _transactions),
       ],
     );
   }

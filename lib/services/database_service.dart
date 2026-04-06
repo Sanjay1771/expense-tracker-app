@@ -4,6 +4,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/transaction_model.dart';
 import '../models/user_model.dart';
 
@@ -131,18 +133,70 @@ class DatabaseService {
     return UserModel.fromMap(results.first);
   }
 
+  /// Get a user by email (for Firebase sync)
+  Future<UserModel?> getUserByEmail(String email) async {
+    final db = await database;
+    final results = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+    if (results.isEmpty) return null;
+    return UserModel.fromMap(results.first);
+  }
+
   // ────────────────────────────────────────────────────────────
   //  TRANSACTION METHODS (now filtered by userId)
   // ────────────────────────────────────────────────────────────
 
-  /// Insert a new transaction
+  /// Insert a new transaction (Local SQLite + Firebase Firestore sync)
   Future<int> insertTransaction(TransactionModel transaction) async {
     final db = await database;
-    return await db.insert(
+    
+    // 1. Save to local SQLite for offline access and immediate UI updates
+    final id = await db.insert(
       'transactions',
       transaction.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    // 2. Sync to Firebase Firestore (Fire-and-forget for cloud backup)
+    _syncTransactionToFirestore(transaction, id);
+
+    return id;
+  }
+
+  /// Private helper to sync a transaction to the user's Firestore collection
+  Future<void> _syncTransactionToFirestore(TransactionModel transaction, int localId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+          print('⚠️ [FIRESTORE] No user logged in. Skipping sync.');
+          return;
+      }
+
+      final uid = user.uid;
+      final firestore = FirebaseFirestore.instance;
+
+      // 🔥 PRODUCTION SAFE: Use .add() to ensure a NEW document is created every time
+      await firestore
+          .collection('users')
+          .doc(uid)
+          .collection('transactions')
+          .add({
+            'amount': transaction.amount,
+            'type': transaction.type == TransactionType.income ? 'income' : 'expense',
+            'category': transaction.category,
+            'note': transaction.note ?? '',
+            'date': transaction.date.toIso8601String(), // ISO Format
+            'createdAt': FieldValue.serverTimestamp(), // Requested timestamp
+            'local_id': localId,
+          });
+      
+      print('✅ [FIRESTORE] Production Sync SUCCESS for UID: $uid');
+    } catch (e) {
+      print('❌ [FIRESTORE] Production Sync FAILED: $e');
+    }
   }
 
   /// Get all transactions for a specific user, ordered by date (newest first)

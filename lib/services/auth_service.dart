@@ -1,6 +1,7 @@
 // Authentication service – manages login sessions via shared_preferences
 // Keeps the user logged in between app restarts
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import 'database_service.dart';
 
@@ -35,19 +36,47 @@ class AuthService {
     return true;
   }
 
-  /// Login with email and password
+  /// Login with email and password via Firebase
   /// Returns a user-friendly error message or null on success
   Future<String?> login(String email, String password) async {
-    final user = await DatabaseService().loginUser(email, password);
-    if (user == null) {
-      return 'Invalid email or password';
-    }
+    try {
+      print('🔵 [AUTH] Attempting Firebase Login for: $email');
+      
+      // 1. Firebase Authentication Login
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+      
+      print('✅ [AUTH] Firebase Login SUCCESS for UID: ${userCredential.user?.uid}');
 
-    // Save session
-    currentUser = user;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_userIdKey, user.id!);
-    return null; // Success
+      // 2. Local Sync: Check if user exists in local SQLite
+      // We need the local ID for transactions/budgets
+      UserModel? user = await DatabaseService().getUserByEmail(email);
+      
+      if (user == null) {
+        print('🟡 [AUTH] User exists in Firebase but not locally. Syncing...');
+        // Create local profile if it doesn't exist (e.g. login on new device)
+        // Using a dummy password hash as Firebase handles real auth
+        user = await DatabaseService().registerUser(email, 'firebase_auth_managed');
+      }
+
+      if (user == null) return 'Local sync failed. Please try again.';
+
+      // 3. Save Session locally for the app's internal logic
+      currentUser = user;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_userIdKey, user.id!);
+      
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      print('❌ [AUTH] Firebase Login FAILED: ${e.code}');
+      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        return 'Invalid email or password';
+      }
+      return e.message ?? 'Authentication failed';
+    } catch (e) {
+      print('❌ [AUTH] Unexpected Login Error: $e');
+      return 'An unexpected error occurred';
+    }
   }
 
   /// Register a new account
@@ -72,9 +101,9 @@ class AuthService {
     await prefs.remove(_userIdKey);
   }
 
-  /// Get the current user's ID (convenience getter)
-  int get userId => currentUser!.id!;
+  /// Get the current user's ID safely without crashing
+  int get userId => currentUser?.id ?? -1;
 
-  /// Get the current user's email
-  String get userEmail => currentUser!.email;
+  /// Get the current user's email safely without crashing
+  String get userEmail => currentUser?.email ?? '';
 }

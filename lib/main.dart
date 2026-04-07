@@ -1,4 +1,4 @@
-// Main entry point — dark theme, auth flow, swipeable 3-tab nav with glowing FAB
+// Main entry point — dark theme, auth flow, swipeable 4-tab nav with glowing FAB
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,8 +12,6 @@ import 'screens/analytics_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/friends_screen.dart';
 import 'widgets/glowing_fab.dart';
-import 'models/friend_model.dart';
-import 'services/friend_service.dart';
 import 'services/settings_service.dart';
 import 'services/notification_service.dart';
 import 'services/background_service.dart';
@@ -147,7 +145,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 }
 
-/// 3-tab navigation with swipeable PageView + animated Glowing FAB
+/// 4-tab navigation with swipeable PageView + animated Glowing FAB
 class MainNavigation extends StatefulWidget {
   final VoidCallback onLogout;
   const MainNavigation({super.key, required this.onLogout});
@@ -212,50 +210,7 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  void _openAddFriend() {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add Friend',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          style: const TextStyle(color: AppTheme.textPrimary),
-          decoration: const InputDecoration(
-            hintText: 'Friend name',
-            hintStyle: TextStyle(color: AppTheme.textMuted),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.textMuted)),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.neonBlue)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = ctrl.text.trim();
-              if (name.isNotEmpty) {
-                await FriendService().addFriend(FriendModel(name: name, userId: AuthService().userId));
-                if (ctx.mounted) Navigator.pop(ctx);
-                _onTxnAdded(); // Refresh data
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.neonBlue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +234,6 @@ class _MainNavigationState extends State<MainNavigation> {
       // Expandable FAB
       floatingActionButton: GlowingFab(
         onAddTransaction: _openAddScreen,
-        onAddFriend: _openAddFriend,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 

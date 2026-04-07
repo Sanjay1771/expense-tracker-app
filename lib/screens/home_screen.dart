@@ -9,7 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/animated_list_item.dart';
-import 'transfer_screen.dart';
+
 import '../services/settings_service.dart';
 import '../models/bill_reminder_model.dart';
 import 'package:intl/intl.dart';
@@ -174,30 +174,7 @@ class HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  /// Navigate to Transfers screen natively
-  void _openTransfers() {
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const TransferScreen(),
-        transitionDuration: const Duration(milliseconds: 350),
-        transitionsBuilder: (context, anim, secondaryAnim, child) {
-          // Cupertino style slide from right
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
-            child: child,
-          );
-        },
-      ),
-    ).then((_) {
-      // Refresh transactions in case friendly transfers were inserted
-      loadData();
-    });
-  }
+
 
   void _openAIChat() {
     Navigator.push(
@@ -331,14 +308,7 @@ class HomeScreenState extends State<HomeScreen> {
                               isActive: _currentFilter == TransactionType.expense,
                               onTap: () => _toggleFilter(TransactionType.expense),
                             ),
-                            const SizedBox(width: 12),
-                            _actionButton(
-                              icon: Icons.swap_horiz_rounded,
-                              label: 'Transfer',
-                              color: AppTheme.neonBlue,
-                              isActive: false, // Transfer is a route, not a filter
-                              onTap: _openTransfers,
-                            ),
+
                           ],
                         ),
                         const SizedBox(height: 28),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
@@ -18,13 +19,25 @@ import 'services/background_service.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 
+/// Top-level FCM background handler (MUST be top-level, runs in separate isolate)
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('🔥 FCM background message: ${message.messageId}');
+  // Firebase automatically shows the notification for background messages
+  // This handler is for any additional data processing you need
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Firebase FIRST
   await Firebase.initializeApp();
   
-  // Initialize notifications early so they're ready before any screen loads
+  // Register FCM background handler (before any other Firebase calls)
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Initialize notifications (local + FCM) early so they're ready before any screen loads
   await NotificationService().initialize();
 
   // Initialize WorkManager for background recurring transaction checks

@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
   static final NotificationService _instance =
@@ -15,9 +17,17 @@ class NotificationService {
 
   bool _initialized = false;
 
-  /// Initialize notifications and request runtime permission on Android 13+
+  /// Initialize notifications, timezone data, and request runtime permission
   Future<void> initialize() async {
     if (_initialized) return;
+
+    // Initialize timezone data for scheduled notifications
+    tz_data.initializeTimeZones();
+    try {
+      tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+    } catch (_) {
+      tz.setLocalLocation(tz.UTC);
+    }
 
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -47,7 +57,7 @@ class NotificationService {
     }
   }
 
-  /// Show notification with debug logging
+  /// Show notification immediately
   Future<void> showNotification({
     int id = 0,
     required String title,
@@ -77,5 +87,50 @@ class NotificationService {
       details,
     );
     debugPrint('🔔 Notification dispatched successfully');
+  }
+
+  /// Schedule a notification at a specific date/time
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    debugPrint('🕐 Scheduling notification "$title" at $scheduledDate');
+
+    final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'friend_reminder_channel',
+      'Friend Reminders',
+      channelDescription: 'Reminders for friend transaction due dates',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    await _notificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tzScheduledDate,
+      details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+    debugPrint('🔔 Scheduled notification for $tzScheduledDate');
+  }
+
+  /// Cancel a scheduled notification by ID
+  Future<void> cancelNotification(int id) async {
+    await _notificationsPlugin.cancel(id);
+    debugPrint('🔕 Notification $id cancelled');
   }
 }

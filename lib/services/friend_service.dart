@@ -1,6 +1,9 @@
 // Friend service — manages friends in a separate DB table
-// Friend transfers themselves are stored as standard Transactions!
+// SQLite methods for TransferScreen + Firestore methods for Friends Wallet
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/friend_model.dart';
 import '../models/friend_transaction_model.dart';
 import 'database_service.dart';
@@ -145,5 +148,96 @@ class FriendService {
     await ensureFriendTables();
     final db = await DatabaseService().database;
     return await db.delete('friend_transactions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ─────────────────────────────────────────────────────
+  //  FIRESTORE — FRIENDS WALLET (Real-time, separate)
+  // ─────────────────────────────────────────────────────
+
+  /// Get the Firestore collection reference for the current user
+  CollectionReference<Map<String, dynamic>>? _walletCollection() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      debugPrint('⚠️ [FRIENDS WALLET] No Firebase user signed in');
+      return null;
+    }
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('friends_transactions');
+  }
+
+  /// Real-time stream of all friend wallet transactions
+  Stream<List<FriendTransactionModel>> streamFriendWallet() {
+    final col = _walletCollection();
+    if (col == null) return Stream.value([]);
+
+    return col
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) =>
+                FriendTransactionModel.fromFirestore(doc.id, doc.data()))
+            .toList())
+        .handleError((e) {
+      debugPrint('❌ [FRIENDS WALLET] Stream error: $e');
+    });
+  }
+
+  /// Add a friend transaction to Firestore
+  Future<String?> addWalletTransaction(FriendTransactionModel ft) async {
+    try {
+      final col = _walletCollection();
+      if (col == null) return null;
+      final doc = await col.add(ft.toFirestore());
+      debugPrint('✅ [FRIENDS WALLET] Added: ${doc.id}');
+      return doc.id;
+    } catch (e) {
+      debugPrint('❌ [FRIENDS WALLET] Add failed: $e');
+      return null;
+    }
+  }
+
+  /// Update a friend transaction in Firestore
+  Future<bool> updateWalletTransaction(
+      String docId, FriendTransactionModel ft) async {
+    try {
+      final col = _walletCollection();
+      if (col == null) return false;
+      await col.doc(docId).update(ft.toFirestore());
+      debugPrint('✅ [FRIENDS WALLET] Updated: $docId');
+      return true;
+    } catch (e) {
+      debugPrint('❌ [FRIENDS WALLET] Update failed: $e');
+      return false;
+    }
+  }
+
+  /// Toggle status between pending/completed
+  Future<bool> updateWalletStatus(String docId, String status) async {
+    try {
+      final col = _walletCollection();
+      if (col == null) return false;
+      await col.doc(docId).update({'status': status});
+      debugPrint('✅ [FRIENDS WALLET] Status → $status for $docId');
+      return true;
+    } catch (e) {
+      debugPrint('❌ [FRIENDS WALLET] Status update failed: $e');
+      return false;
+    }
+  }
+
+  /// Delete a friend transaction from Firestore
+  Future<bool> deleteWalletTransaction(String docId) async {
+    try {
+      final col = _walletCollection();
+      if (col == null) return false;
+      await col.doc(docId).delete();
+      debugPrint('✅ [FRIENDS WALLET] Deleted: $docId');
+      return true;
+    } catch (e) {
+      debugPrint('❌ [FRIENDS WALLET] Delete failed: $e');
+      return false;
+    }
   }
 }

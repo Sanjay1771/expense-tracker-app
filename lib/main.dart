@@ -10,6 +10,7 @@ import 'screens/home_screen.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/friends_screen.dart';
 import 'widgets/glowing_fab.dart';
 import 'models/friend_model.dart';
 import 'services/friend_service.dart';
@@ -158,6 +159,7 @@ class _MainNavigationState extends State<MainNavigation> {
   int _idx = 0;
   late PageController _pageCtrl;
   final _homeKey = GlobalKey<HomeScreenState>();
+  final _friendsKey = GlobalKey<FriendsScreenState>();
   final _analyticsKey = GlobalKey<AnalyticsScreenState>();
 
   @override
@@ -174,6 +176,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _onTxnAdded() {
     _homeKey.currentState?.loadData();
+    _friendsKey.currentState?.loadData();
     _analyticsKey.currentState?.loadData();
     // Navigate to home tab
     _goToPage(0);
@@ -266,6 +269,7 @@ class _MainNavigationState extends State<MainNavigation> {
           onPageChanged: (i) => setState(() => _idx = i),
           children: [
             HomeScreen(key: _homeKey),
+            FriendsScreen(key: _friendsKey),
             AnalyticsScreen(key: _analyticsKey),
             ProfileScreen(onLogout: widget.onLogout),
           ],
@@ -296,8 +300,9 @@ class _MainNavigationState extends State<MainNavigation> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _navItem(0, Icons.home_rounded, 'Home'),
-                _navItem(1, Icons.bar_chart_rounded, 'Analytics'),
-                _navItem(2, Icons.person_rounded, 'Profile'),
+                _navItem(1, Icons.group_rounded, 'Friends'),
+                _navItem(2, Icons.bar_chart_rounded, 'Analytics'),
+                _navItem(3, Icons.person_rounded, 'Profile'),
               ],
             ),
           ),

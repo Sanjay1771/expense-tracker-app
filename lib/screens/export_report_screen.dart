@@ -64,10 +64,11 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
           pw.Text('Recent Transactions', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
-            headers: ['Date', 'Title', 'Type', 'Amount'],
+            headers: ['Date', 'Time', 'Title', 'Type', 'Amount'],
             data: txns.take(20).map((t) {
               return [
                 DateFormat('MMM dd').format(t.date),
+                DateFormat('hh:mm a').format(t.date),
                 t.title,
                 t.type.name.toUpperCase(),
                 '₹${t.amount.toStringAsFixed(0)}',

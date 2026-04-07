@@ -1,11 +1,8 @@
-// Background service using WorkManager for recurring transaction checks
-// Runs periodically even when the app is closed
-// This is a NEW file — no existing logic is changed
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
-import 'notification_service.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'recurring_service.dart';
 
 // ────────────────────────────────────────────────────────────
@@ -30,7 +27,10 @@ void callbackDispatcher() {
     try {
       debugPrint('🔁 [Background] WorkManager task started: $taskName');
 
-      // ── 1. Get the logged-in user ID from SharedPreferences ──
+      // ── 1. Initialize Firebase in background isolate ──
+      await Firebase.initializeApp();
+
+      // ── 2. Get the logged-in user ID from SharedPreferences ──
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt('logged_in_user_id');
 
@@ -38,9 +38,6 @@ void callbackDispatcher() {
         debugPrint('🔁 [Background] No logged-in user — skipping.');
         return Future.value(true); // Task succeeded, nothing to do
       }
-
-      // ── 2. Initialize notifications (needed in background isolate) ──
-      await NotificationService().initialize();
 
       // ── 3. Check and add due recurring transactions ──
       final addedCount = await RecurringService().checkDueTransactions(userId);

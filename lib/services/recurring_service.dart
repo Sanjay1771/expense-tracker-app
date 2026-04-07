@@ -5,8 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recurring_model.dart';
 import '../models/transaction_model.dart';
-import '../services/database_service.dart';
-import '../services/notification_service.dart';
+import '../services/firestore_service.dart';
 
 class RecurringService {
   static final RecurringService _instance = RecurringService._internal();
@@ -117,13 +116,9 @@ class RecurringService {
       await _updateRecurring(updated);
     }
 
-    // Show a notification if transactions were added
+    // Log that recurring transactions were added
     if (addedCount > 0) {
-      NotificationService().showNotification(
-        id: 100,
-        title: '🔁 Recurring Transactions',
-        body: '$addedCount recurring transaction${addedCount > 1 ? 's' : ''} added automatically.',
-      );
+      debugPrint('🔁 $addedCount recurring transaction(s) added automatically.');
     }
 
     return addedCount;
@@ -143,7 +138,7 @@ class RecurringService {
       userId: userId,
     );
 
-    await DatabaseService().insertTransaction(txn);
+    await FirestoreService().addTransaction(txn);
     debugPrint('🔁 Recurring transaction added: ${item.title} — ₹${item.amount} for ${forDate.toIso8601String()}');
   }
 

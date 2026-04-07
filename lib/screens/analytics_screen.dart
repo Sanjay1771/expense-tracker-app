@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
-import '../services/database_service.dart';
+import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_list_item.dart';
 import '../services/settings_service.dart';
@@ -20,7 +20,7 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class AnalyticsScreenState extends State<AnalyticsScreen> {
-  final _db = DatabaseService();
+  final _fs = FirestoreService();
   final _auth = AuthService();
   Map<String, double> _expByCategory = {};
   List<TransactionModel> _transactions = [];
@@ -41,8 +41,8 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> loadData() async {
     setState(() => _loading = true);
     final uid = _auth.userId;
-    final txns = await _db.getTransactions(uid);
-    final cats = await _db.getExpensesByCategory(uid);
+    final txns = await _fs.getTransactions();
+    final cats = await _fs.getExpensesByCategory();
     final total = cats.values.fold(0.0, (s, v) => s + v);
     
     // Load category budgets

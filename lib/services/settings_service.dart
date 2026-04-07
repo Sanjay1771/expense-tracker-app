@@ -1,5 +1,8 @@
-// Service to handle user settings like budget and theme using SharedPreferences
+// Service to handle user settings
+// Theme: SharedPreferences (device-local)
+// Budgets: Firestore (cloud-synced)
 import 'package:shared_preferences/shared_preferences.dart';
+import 'firestore_service.dart';
 
 class SettingsService {
   static final SettingsService _instance = SettingsService._internal();
@@ -7,8 +10,9 @@ class SettingsService {
   SettingsService._internal();
 
   static const String _themeKey = 'is_dark_mode';
-  static const String _budgetPrefix = 'budget_';
-  static const String _catBudgetPrefix = 'cat_budget_';
+  final _fs = FirestoreService();
+
+  // ── Theme (stays local — device preference) ──
 
   Future<void> setThemeMode(bool isDark) async {
     final prefs = await SharedPreferences.getInstance();
@@ -20,23 +24,24 @@ class SettingsService {
     return prefs.getBool(_themeKey) ?? true; // Default to dark mode
   }
 
+  // ── Monthly Budget (Firestore-backed) ──
+  // userId param kept for API compat but ignored (uses Firebase UID)
+
   Future<void> setMonthlyBudget(int userId, double amount) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('$_budgetPrefix$userId', amount);
+    await _fs.setMonthlyBudget(amount);
   }
 
   Future<double> getMonthlyBudget(int userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble('$_budgetPrefix$userId') ?? 0.0;
+    return await _fs.getMonthlyBudget();
   }
 
+  // ── Category Budgets (Firestore-backed) ──
+
   Future<void> setCategoryBudget(int userId, String category, double amount) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('$_catBudgetPrefix${userId}_$category', amount);
+    await _fs.setCategoryBudget(category, amount);
   }
 
   Future<double> getCategoryBudget(int userId, String category) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble('$_catBudgetPrefix${userId}_$category') ?? 0.0;
+    return await _fs.getCategoryBudget(category);
   }
 }

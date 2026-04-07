@@ -1,6 +1,7 @@
-// Model for bill reminders
+// Model for bill reminders — supports both SQLite and Firestore
 class BillReminder {
   final int? id;
+  final String? docId; // Firestore document ID
   final String title;
   final DateTime date;
   final int userId;
@@ -8,6 +9,7 @@ class BillReminder {
 
   BillReminder({
     this.id,
+    this.docId,
     required this.title,
     required this.date,
     required this.userId,
@@ -23,10 +25,11 @@ class BillReminder {
   };
 
   factory BillReminder.fromMap(Map<String, dynamic> map) => BillReminder(
-    id: map['id'] as int?,
+    id: map['id'] is int ? map['id'] as int : null,
+    docId: map['id'] is String ? map['id'] as String : null,
     title: map['title'] as String,
-    date: DateTime.parse(map['date'] as String),
-    userId: map['user_id'] as int,
-    isCompleted: (map['is_completed'] as int) == 1,
+    date: DateTime.tryParse(map['date'] as String? ?? '') ?? DateTime.now(),
+    userId: map['user_id'] is int ? map['user_id'] as int : 0,
+    isCompleted: map['is_completed'] == 1 || map['is_completed'] == true,
   );
 }

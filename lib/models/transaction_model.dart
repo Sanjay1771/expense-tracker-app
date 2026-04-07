@@ -95,6 +95,7 @@ class AppCategories {
 /// Main transaction model – now includes userId for multi-user support
 class TransactionModel {
   final int? id;
+  final String? docId; // Firestore document ID
   final String title;
   final double amount;
   final String category;
@@ -105,6 +106,7 @@ class TransactionModel {
 
   TransactionModel({
     this.id,
+    this.docId,
     required this.title,
     required this.amount,
     required this.category,
@@ -141,6 +143,63 @@ class TransactionModel {
           ? TransactionType.income
           : TransactionType.expense,
       userId: map['user_id'] as int,
+    );
+  }
+
+  // ── Firestore serialization ──
+
+  Map<String, dynamic> toFirestore() => {
+        'title': title,
+        'amount': amount,
+        'type': type == TransactionType.income ? 'income' : 'expense',
+        'category': category,
+        'date': date.toIso8601String(),
+        'notes': note ?? '',
+        'userId': userId.toString(),
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+  factory TransactionModel.fromFirestore(
+    String docId,
+    Map<String, dynamic> data,
+  ) {
+    return TransactionModel(
+      docId: docId,
+      title: data['title'] as String? ?? data['category'] as String? ?? '',
+      amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+      category: data['category'] as String? ?? 'Other',
+      date: DateTime.tryParse(data['date'] as String? ?? '') ?? DateTime.now(),
+      note: (data['notes'] as String?)?.isNotEmpty == true
+          ? data['notes'] as String
+          : data['note'] as String?,
+      type: data['type'] == 'income'
+          ? TransactionType.income
+          : TransactionType.expense,
+      userId: int.tryParse(data['userId']?.toString() ?? '') ?? 0,
+    );
+  }
+
+  TransactionModel copyWith({
+    int? id,
+    String? docId,
+    String? title,
+    double? amount,
+    String? category,
+    DateTime? date,
+    String? note,
+    TransactionType? type,
+    int? userId,
+  }) {
+    return TransactionModel(
+      id: id ?? this.id,
+      docId: docId ?? this.docId,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      category: category ?? this.category,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      type: type ?? this.type,
+      userId: userId ?? this.userId,
     );
   }
 

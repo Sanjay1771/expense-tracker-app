@@ -8,7 +8,6 @@ import '../main.dart';
 import 'export_report_screen.dart';
 import 'recurring_screen.dart';
 import 'calendar_screen.dart';
-import 'calendar_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback onLogout;

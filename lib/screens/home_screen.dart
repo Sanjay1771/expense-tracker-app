@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
-import '../services/database_service.dart';
+import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/transaction_tile.dart';
@@ -15,7 +15,6 @@ import '../models/bill_reminder_model.dart';
 import 'package:intl/intl.dart';
 import '../services/ai_service.dart';
 import 'ai_chat_screen.dart';
-import '../services/notification_service.dart';
 import '../services/recurring_service.dart';
 
 import '../widgets/dashboard_widgets.dart';
@@ -28,7 +27,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  final DatabaseService _db = DatabaseService();
+  final FirestoreService _fs = FirestoreService();
   final AuthService _auth = AuthService();
   List<TransactionModel> _transactions = [];
   double _totalIncome = 0;
@@ -41,18 +40,15 @@ class HomeScreenState extends State<HomeScreen> {
   double _monthlyBudget = 0;
   List<BillReminder> _reminders = [];
   final _settings = SettingsService();
-  final _notify = NotificationService();
 
   double _weeklyIncome = 0;
   double _weeklyExpense = 0;
   double _monthlyIncome = 0;
   double _monthlyExpense = 0;
-  bool _hasCheckedNotifications = false;
 
   @override
   void initState() {
     super.initState();
-    _notify.initialize();
     loadData();
   }
 
@@ -64,11 +60,11 @@ class HomeScreenState extends State<HomeScreen> {
     // Check and add any due recurring transactions before loading
     await RecurringService().checkDueTransactions(uid);
 
-    final txns = await _db.getTransactions(uid);
-    final inc = await _db.getTotalIncome(uid);
-    final exp = await _db.getTotalExpense(uid);
+    final txns = await _fs.getTransactions();
+    final inc = await _fs.getTotalIncome();
+    final exp = await _fs.getTotalExpense();
     final budget = await _settings.getMonthlyBudget(uid);
-    final reminderMaps = await _db.getReminders(uid);
+    final reminderMaps = await _fs.getReminders();
     final reminders = reminderMaps.map((m) => BillReminder.fromMap(m)).toList();
     
     // Weekly/Monthly stats
@@ -106,59 +102,13 @@ class HomeScreenState extends State<HomeScreen> {
         
         _isLoading = false;
       });
-
-      _checkSmartNotifications();
     }
   }
 
-  void _checkSmartNotifications() {
-    // Only check once per session to avoid spam on every refresh
-    if (_hasCheckedNotifications) return;
-    _hasCheckedNotifications = true;
-
-    // ── Multi-level budget alerts (70% / 85% / 100%) ──
-    if (_monthlyBudget > 0) {
-      final budgetRatio = _monthlyExpense / _monthlyBudget;
-      if (budgetRatio >= 1.0) {
-        _notify.showNotification(
-          id: 1,
-          title: '🚨 Budget Exceeded!',
-          body: 'You\'ve spent ₹${_monthlyExpense.toStringAsFixed(0)} — ${(budgetRatio * 100).toStringAsFixed(0)}% of your ₹${_monthlyBudget.toStringAsFixed(0)} budget!',
-        );
-      } else if (budgetRatio >= 0.85) {
-        _notify.showNotification(
-          id: 1,
-          title: '⚠️ Budget Alert — 85%+',
-          body: 'You\'ve used ${(budgetRatio * 100).toStringAsFixed(0)}% of your budget. Slow down!',
-        );
-      } else if (budgetRatio >= 0.7) {
-        _notify.showNotification(
-          id: 1,
-          title: '📊 Budget Update — 70%+',
-          body: 'You\'ve used ${(budgetRatio * 100).toStringAsFixed(0)}% of your monthly budget.',
-        );
-      }
+  Future<void> _deleteTransaction(TransactionModel tx) async {
+    if (tx.docId != null) {
+      await _fs.deleteTransaction(tx.docId!);
     }
-
-    // ── Dynamic daily spending alert ──
-    // Uses monthlyBudget / 30 as daily limit; falls back to ₹1,500 if no budget set
-    final today = DateTime.now();
-    final todayExp = _transactions
-        .where((t) => t.type == TransactionType.expense && t.date.year == today.year && t.date.month == today.month && t.date.day == today.day)
-        .fold(0.0, (sum, t) => sum + t.amount);
-
-    final dailyLimit = _monthlyBudget > 0 ? _monthlyBudget / 30 : 1500.0;
-    if (todayExp > dailyLimit) {
-      _notify.showNotification(
-        id: 2,
-        title: '💸 High Spending Today',
-        body: 'You\'ve spent ₹${todayExp.toStringAsFixed(0)} today (daily limit: ₹${dailyLimit.toStringAsFixed(0)}).',
-      );
-    }
-  }
-
-  Future<void> _deleteTransaction(int id) async {
-    await _db.deleteTransaction(id);
     await loadData();
   }
 
@@ -383,7 +333,7 @@ class HomeScreenState extends State<HomeScreen> {
                                 child: TransactionTile(
                                   transaction: displayedTransactions[index],
                                   onDelete: () => _deleteTransaction(
-                                      displayedTransactions[index].id!),
+                                      displayedTransactions[index]),
                                 ),
                               );
                             },
@@ -534,11 +484,11 @@ class HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               onPressed: () async {
                 if (titleCtrl.text.isEmpty) return;
-                await _db.insertReminder({
+                await _fs.insertReminder({
                   'title': titleCtrl.text,
                   'date': selectedDate.toIso8601String(),
                   'user_id': _auth.userId,
-                  'is_completed': 0,
+                  'is_completed': false,
                 });
                 if (ctx.mounted) Navigator.pop(ctx);
                 loadData();
@@ -693,7 +643,9 @@ class HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 6),
                     GestureDetector(
                       onTap: () async {
-                        await _db.updateReminder(reminder.id!, !reminder.isCompleted);
+                        if (reminder.docId != null) {
+                          await _fs.updateReminder(reminder.docId!, !reminder.isCompleted);
+                        }
                         loadData();
                       },
                       child: Text(

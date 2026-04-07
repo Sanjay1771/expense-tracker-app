@@ -1,81 +1,64 @@
 // Reminder service for friend wallet transactions
-// Schedules notifications 2 days before due date at 10:00 AM
+// Uses FCM topic-based reminders instead of local notifications
+// Friend due-date reminders are tracked in Firestore for server-side push
 import 'package:flutter/foundation.dart';
 import '../models/friend_transaction_model.dart';
-import 'notification_service.dart';
+import 'firestore_service.dart';
 
 class ReminderService {
   static final ReminderService _instance = ReminderService._internal();
   factory ReminderService() => _instance;
   ReminderService._internal();
 
-  final _notify = NotificationService();
+  final _fs = FirestoreService();
 
-  /// Schedule a reminder 2 days before dueDate at 10:00 AM
+  /// Schedule a reminder by saving it to Firestore
+  /// Server-side Cloud Functions can then send push notifications
   Future<void> scheduleFriendReminder(FriendTransactionModel tx) async {
     if (tx.dueDate == null || tx.docId == null) return;
     if (tx.isCompleted) return;
 
-    final reminderDate = DateTime(
-      tx.dueDate!.year,
-      tx.dueDate!.month,
-      tx.dueDate!.day,
-      10, 0,
-    ).subtract(const Duration(days: 2));
-
+    final reminderDate = tx.dueDate!.subtract(const Duration(days: 2));
     final direction = tx.isGiven ? 'to' : 'from';
-    final notifId = _notifId(tx.docId!);
-
-    // If reminder date is already past but due date is still upcoming, show immediately
-    if (reminderDate.isBefore(DateTime.now())) {
-      if (tx.dueDate!.isAfter(DateTime.now())) {
-        await _notify.showNotification(
-          id: notifId,
-          title: '💰 Friend Reminder',
-          body: 'Reminder: ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName} due soon',
-        );
-      }
-      return;
-    }
 
     try {
-      await _notify.scheduleNotification(
-        id: notifId,
-        title: '💰 Friend Reminder',
-        body: 'Reminder: ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName} due soon',
-        scheduledDate: reminderDate,
-      );
-      debugPrint('🔔 Reminder scheduled for ${tx.friendName} at $reminderDate');
+      await _fs.insertReminder({
+        'title': '💰 ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName}',
+        'date': reminderDate.toIso8601String(),
+        'user_id': 0,
+        'is_completed': false,
+        'type': 'friend_reminder',
+        'friendDocId': tx.docId,
+      });
+      debugPrint('🔔 Friend reminder saved for ${tx.friendName} at $reminderDate');
     } catch (e) {
-      debugPrint('⚠️ Schedule failed, showing immediately: $e');
-      await _notify.showNotification(
-        id: notifId,
-        title: '💰 Friend Reminder',
-        body: 'Reminder: ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName} due soon',
-      );
+      debugPrint('⚠️ Failed to save friend reminder: $e');
     }
   }
 
-  /// Cancel a scheduled reminder
+  /// Cancel a scheduled reminder by marking it completed in Firestore
   Future<void> cancelFriendReminder(String docId) async {
-    await _notify.cancelNotification(_notifId(docId));
-    debugPrint('🔕 Reminder cancelled for doc: $docId');
+    // Find and delete reminder associated with this friend transaction
+    try {
+      final reminders = await _fs.getReminders();
+      for (final r in reminders) {
+        if (r['friendDocId'] == docId && r['id'] != null) {
+          await _fs.deleteReminder(r['id'] as String);
+          debugPrint('🔕 Friend reminder cancelled for doc: $docId');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to cancel friend reminder: $e');
+    }
   }
 
-  /// On app open: check all pending transactions and notify for due-soon ones
+  /// On app open: log any due-soon transactions (notifications are handled server-side)
   Future<void> checkAndNotifyUpcoming(List<FriendTransactionModel> txns) async {
     for (final tx in txns) {
       if (tx.isPending && (tx.isDueSoon || tx.isOverdue) && tx.docId != null) {
         final direction = tx.isGiven ? 'to' : 'from';
-        await _notify.showNotification(
-          id: _notifId(tx.docId!),
-          title: '💰 Friend Reminder',
-          body: 'Reminder: ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName} due soon',
-        );
+        debugPrint('⏰ Due soon: ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName}');
       }
     }
   }
-
-  /// Stable notification ID from Firestore doc ID (offset 10000+)
-  int _notifId(String docId) => (docId.hashCode.abs() % 90000) + 10000;
 }

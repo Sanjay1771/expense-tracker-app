@@ -6,8 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/friend_service.dart';
 import '../models/friend_transaction_model.dart';
 import '../theme/app_theme.dart';
 
@@ -19,20 +18,10 @@ class ExportFriendsReportScreen extends StatefulWidget {
 }
 
 class _ExportFriendsReportScreenState extends State<ExportFriendsReportScreen> {
+  final _svc = FriendService();
+
   Future<List<FriendTransactionModel>> _fetchData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return [];
-
-    final snap = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('friends_transactions')
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    return snap.docs
-        .map((d) => FriendTransactionModel.fromFirestore(d.id, d.data()))
-        .toList();
+    return await _svc.fetchFriendWallet();
   }
 
   Future<Uint8List> _generatePdf(PdfPageFormat format) async {

@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+
+import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -24,8 +24,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
   final _amountCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _categoryDescCtrl = TextEditingController(); // mini-note for detail categories
-  final _fs = FirestoreService();
-  final _auth = AuthService();
+  final _db = SupabaseDbService();
+
 
   TransactionType _type = TransactionType.expense;
   Category? _category;
@@ -130,14 +130,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
     final amount = double.parse(_amountCtrl.text);
     final categoryName = _category!.name;
 
-    await _fs.addTransaction(TransactionModel(
-      title: categoryName,
+    await _db.addTransaction(TransactionModel(
+      id: '',
       amount: amount,
       category: categoryName,
       date: _date,
-      note: finalNote,
+      notes: finalNote,
       type: _type,
-      userId: _auth.userId,
     ));
 
     if (mounted) {
@@ -164,7 +163,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
 
       // Small delay so user sees the snackbar, then auto-navigate home
       await Future.delayed(const Duration(milliseconds: 400));
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, true);
     }
   }
 

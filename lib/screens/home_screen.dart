@@ -3,19 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/transaction_model.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+
+import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/animated_list_item.dart';
 
-import '../services/settings_service.dart';
-import '../models/bill_reminder_model.dart';
-import 'package:intl/intl.dart';
+
 import '../services/ai_service.dart';
 import 'ai_chat_screen.dart';
-import '../services/recurring_service.dart';
+
 
 import '../widgets/dashboard_widgets.dart';
 
@@ -27,8 +25,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  final FirestoreService _fs = FirestoreService();
-  final AuthService _auth = AuthService();
+  final SupabaseDbService _db = SupabaseDbService();
+
   List<TransactionModel> _transactions = [];
   double _totalIncome = 0;
   double _totalExpense = 0;
@@ -37,9 +35,6 @@ class HomeScreenState extends State<HomeScreen> {
 
   // Defines the current filter constraint
   TransactionType? _currentFilter;
-  double _monthlyBudget = 0;
-  List<BillReminder> _reminders = [];
-  final _settings = SettingsService();
 
   double _weeklyIncome = 0;
   double _weeklyExpense = 0;
@@ -55,60 +50,55 @@ class HomeScreenState extends State<HomeScreen> {
   /// Load all data for the current user
   Future<void> loadData() async {
     setState(() => _isLoading = true);
-    final uid = _auth.userId;
 
-    // Check and add any due recurring transactions before loading
-    await RecurringService().checkDueTransactions(uid);
-
-    final txns = await _fs.getTransactions();
-    final inc = await _fs.getTotalIncome();
-    final exp = await _fs.getTotalExpense();
-    final budget = await _settings.getMonthlyBudget(uid);
-    final reminderMaps = await _fs.getReminders();
-    final reminders = reminderMaps.map((m) => BillReminder.fromMap(m)).toList();
-    
-    // Weekly/Monthly stats
-    final now = DateTime.now();
-    final sevenDaysAgo = now.subtract(const Duration(days: 7));
-    
-    double weeklyInc = 0, weeklyExp = 0, monthlyInc = 0, monthlyExp = 0;
-    for (var t in txns) {
-      if (t.date.isAfter(sevenDaysAgo)) {
-        if (t.type == TransactionType.income) weeklyInc += t.amount;
-        else weeklyExp += t.amount;
+    try {
+      final txns = await _db.getTransactions();
+      final inc = await _db.getTotalIncome();
+      final exp = await _db.getTotalExpense();
+      
+      // Weekly/Monthly stats
+      final now = DateTime.now();
+      final sevenDaysAgo = now.subtract(const Duration(days: 7));
+      
+      double weeklyInc = 0, weeklyExp = 0, monthlyInc = 0, monthlyExp = 0;
+      for (var t in txns) {
+        if (t.date.isAfter(sevenDaysAgo)) {
+          if (t.type == TransactionType.income) weeklyInc += t.amount;
+          else weeklyExp += t.amount;
+        }
+        if (t.date.month == now.month && t.date.year == now.year) {
+          if (t.type == TransactionType.income) monthlyInc += t.amount;
+          else monthlyExp += t.amount;
+        }
       }
-      if (t.date.month == now.month && t.date.year == now.year) {
-        if (t.type == TransactionType.income) monthlyInc += t.amount;
-        else monthlyExp += t.amount;
+
+      if (mounted) {
+        // Analyze real data with AI service
+        final analysis = AIService.analyze(txns);
+
+        setState(() {
+          _transactions = txns;
+          _totalIncome = inc;
+          _totalExpense = exp;
+          _aiAnalysis = analysis;
+          
+          _weeklyIncome = weeklyInc;
+          _weeklyExpense = weeklyExp;
+          _monthlyIncome = monthlyInc;
+          _monthlyExpense = monthlyExp;
+        });
       }
-    }
-
-    if (mounted) {
-      // Analyze real data with AI service
-      final analysis = AIService.analyze(txns);
-
-      setState(() {
-        _transactions = txns;
-        _totalIncome = inc;
-        _totalExpense = exp;
-        _monthlyBudget = budget;
-        _reminders = reminders;
-        _aiAnalysis = analysis;
-        
-        _weeklyIncome = weeklyInc;
-        _weeklyExpense = weeklyExp;
-        _monthlyIncome = monthlyInc;
-        _monthlyExpense = monthlyExp;
-        
-        _isLoading = false;
-      });
+    } catch (e) {
+      debugPrint('❌ [HOME] loadData failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> _deleteTransaction(TransactionModel tx) async {
-    if (tx.docId != null) {
-      await _fs.deleteTransaction(tx.docId!);
-    }
+    await _db.deleteTransaction(tx.id);
     await loadData();
   }
 
@@ -144,8 +134,8 @@ class HomeScreenState extends State<HomeScreen> {
 
     // Filter transactions correctly
     final displayedTransactions = _transactions.where((t) {
-      // Exclude friend-related transactions from the main list as requested
-      if (t.title == 'Transfer' && t.note != null && t.note!.startsWith('Friend: ')) return false;
+        // Hide auto-generated Friend Wallet transfers from the recent list
+        if (t.category == 'Transfer' && t.notes != null && t.notes!.startsWith('Friend: ')) return false;
       
       if (_currentFilter == null) return true;
       return t.type == _currentFilter;
@@ -232,14 +222,6 @@ class HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // ── Budget Progress ──────────────────────
-                        if (_monthlyBudget > 0) ...[
-                          _buildBudgetProgress(),
-                          const SizedBox(height: 24),
-                        ],
-
-                        const SizedBox(height: 24),
-
                         // ── Quick Action Buttons (now active toggles) ──
                         Row(
                           children: [
@@ -262,12 +244,6 @@ class HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         const SizedBox(height: 28),
-
-                        // ── Bill Reminders ────────────────────────
-                        if (_reminders.isNotEmpty) ...[
-                          _buildRemindersSection(),
-                          const SizedBox(height: 28),
-                        ],
 
                         // ── AI Insights Card ─────────────────────
                         if (_aiAnalysis != null) ...[
@@ -444,228 +420,7 @@ class HomeScreenState extends State<HomeScreen> {
     return 'Evening';
   }
 
-  void _showAddReminderDialog() {
-    final titleCtrl = TextEditingController();
-    DateTime selectedDate = DateTime.now();
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppTheme.bgCard,
-          title: Text('Add Bill Reminder', style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(hintText: 'Bill Title (e.g. Rent)'),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today_rounded, color: AppTheme.neonBlue),
-                title: Text(DateFormat('MMM dd, yyyy').format(selectedDate), style: const TextStyle(color: AppTheme.textPrimary)),
-                onTap: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (d != null) setDialogState(() => selectedDate = d);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                if (titleCtrl.text.isEmpty) return;
-                await _fs.insertReminder({
-                  'title': titleCtrl.text,
-                  'date': selectedDate.toIso8601String(),
-                  'user_id': _auth.userId,
-                  'is_completed': false,
-                });
-                if (ctx.mounted) Navigator.pop(ctx);
-                loadData();
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBudgetProgress() {
-    final progress = (_monthlyExpense / _monthlyBudget).clamp(0.0, 1.0);
-    final isWarning = progress >= 0.8;
-    final isAlert = progress >= 1.0;
-    final color = isAlert ? AppTheme.neonRed : (isWarning ? AppTheme.neonOrange : AppTheme.neonBlue);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.bgCard,
-        borderRadius: BorderRadius.circular(AppTheme.r16),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Monthly Budget',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              Text(
-                '${(progress * 100).toStringAsFixed(0)}%',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppTheme.bgCardLight,
-              color: color,
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '₹${_monthlyExpense.toStringAsFixed(0)} / ₹${_monthlyBudget.toStringAsFixed(0)}',
-                style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary),
-              ),
-              if (isAlert)
-                Text('Limit Exceeded!', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.neonRed, fontWeight: FontWeight.w600))
-              else if (isWarning)
-                Text('Approaching Limit', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.neonOrange, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRemindersSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Upcoming Bills',
-              style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            IconButton(
-              onPressed: _showAddReminderDialog,
-              icon: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.neonBlue, size: 24),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 100,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: _reminders.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final reminder = _reminders[index];
-              final isOverdue = reminder.date.isBefore(DateTime.now());
-              return Container(
-                width: 160,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgCard,
-                  borderRadius: BorderRadius.circular(AppTheme.r16),
-                  border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      reminder.title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 12,
-                          color: isOverdue ? AppTheme.neonRed : AppTheme.textMuted,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          DateFormat('MMM dd').format(reminder.date),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: isOverdue ? AppTheme.neonRed : AppTheme.textSecondary,
-                            fontWeight: isOverdue ? FontWeight.w600 : FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: () async {
-                        if (reminder.docId != null) {
-                          await _fs.updateReminder(reminder.docId!, !reminder.isCompleted);
-                        }
-                        loadData();
-                      },
-                      child: Text(
-                        reminder.isCompleted ? 'Completed' : 'Mark Done',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: reminder.isCompleted ? AppTheme.neonGreen : AppTheme.neonBlue,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildAIInsightsCard() {
     if (_aiAnalysis == null) return const SizedBox();

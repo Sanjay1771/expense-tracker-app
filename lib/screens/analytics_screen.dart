@@ -5,11 +5,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+
+import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_list_item.dart';
-import '../services/settings_service.dart';
 import '../services/ai_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -20,15 +19,13 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class AnalyticsScreenState extends State<AnalyticsScreen> {
-  final _fs = FirestoreService();
-  final _auth = AuthService();
+  final _db = SupabaseDbService();
+
   Map<String, double> _expByCategory = {};
   List<TransactionModel> _transactions = [];
   double _totalExp = 0;
   bool _loading = true;
   int _touchedPie = -1;
-  final _settings = SettingsService();
-  Map<String, double> _catBudgets = {};
   String _insightText = "Checking your spending habits...";
   Color _insightColor = AppTheme.neonBlue;
 
@@ -40,49 +37,27 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Future<void> loadData() async {
     setState(() => _loading = true);
-    final uid = _auth.userId;
-    final txns = await _fs.getTransactions();
-    final cats = await _fs.getExpensesByCategory();
+
+    final txns = await _db.getTransactions();
+    final cats = await _db.getExpensesByCategory();
     final total = cats.values.fold(0.0, (s, v) => s + v);
-    
-    // Load category budgets
-    final budgets = <String, double>{};
-    for (final cat in cats.keys) {
-      budgets[cat] = await _settings.getCategoryBudget(uid, cat);
-    }
 
     final aiAnalysis = AIService.analyze(txns, isSample: txns.isEmpty);
-    _computeInsights(txns, cats, budgets, aiAnalysis);
+    _computeInsights(aiAnalysis);
 
     if (mounted) {
       setState(() {
         _transactions = txns;
         _expByCategory = cats;
         _totalExp = total;
-        _catBudgets = budgets;
         _loading = false;
       });
     }
   }
 
-  void _computeInsights(List<TransactionModel> txns, Map<String, double> cats, Map<String, double> budgets, AIAnalysis ai) {
+  void _computeInsights(AIAnalysis ai) {
     _insightText = ai.insightMessage;
     _insightColor = ai.isSpendingIncreasing ? AppTheme.neonPink : AppTheme.neonBlue;
-
-    // Check category limits
-    String? exceededCat;
-    for (final entry in cats.entries) {
-      final budget = budgets[entry.key] ?? 0;
-      if (budget > 0 && entry.value > budget) {
-        exceededCat = entry.key;
-        break;
-      }
-    }
-
-    if (exceededCat != null) {
-      _insightText += "\nWarning: You exceeded your limit for $exceededCat!";
-      _insightColor = AppTheme.neonRed;
-    }
   }
 
   @override
@@ -169,18 +144,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     const SizedBox(height: 20),
 
-                    // ── Category Limits ───────────────────────
-                    if (_catBudgets.values.any((v) => v > 0)) ...[
-                      _chartCard(
-                        title: 'Category Spending Limits',
-                        icon: Icons.speed_rounded,
-                        color: AppTheme.neonOrange,
-                        child: Column(
-                          children: _categoryLimitList(),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
+
                   ],
                 ],
               ),
@@ -594,52 +558,4 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  List<Widget> _categoryLimitList() {
-    return _expByCategory.entries.where((e) => (_catBudgets[e.key] ?? 0) > 0).map((e) {
-      final budget = _catBudgets[e.key]!;
-      final spending = e.value;
-      final progress = (spending / budget).clamp(0.0, 1.0);
-      final color = progress >= 1.0 ? AppTheme.neonRed : (progress >= 0.8 ? AppTheme.neonOrange : AppTheme.neonBlue);
-
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  e.key,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                Text(
-                  '₹${spending.toStringAsFixed(0)} / ₹${budget.toStringAsFixed(0)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: AppTheme.bgCardLight,
-                color: color,
-                minHeight: 6,
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
-  }
 }

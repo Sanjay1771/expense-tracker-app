@@ -1,22 +1,19 @@
 // Friend transaction model: completely separate from personal transactions
-// Supports both SQLite (existing TransferScreen) and Firestore (new Friends Wallet)
+// Supabase (Friends Wallet)
 
 class FriendTransactionModel {
-  final int? id;          // SQLite primary key (existing compat)
-  final String? docId;    // Firestore document ID (Friends Wallet)
+  final String id;
   final String friendName;
   final double amount;
-  final String type;      // 'given' or 'received'
+  final String type;      // 'lent' or 'borrowed'
   final DateTime date;
   final DateTime? dueDate;
   final String status;    // 'pending' or 'completed'
   final String? note;
-  final int userId;       // SQLite user ID (existing compat)
   final DateTime createdAt;
 
   FriendTransactionModel({
-    this.id,
-    this.docId,
+    required this.id,
     required this.friendName,
     required this.amount,
     required this.type,
@@ -24,12 +21,11 @@ class FriendTransactionModel {
     this.dueDate,
     this.status = 'pending',
     this.note,
-    required this.userId,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  bool get isGiven => type == 'given';
-  bool get isReceived => type == 'received';
+  bool get isGiven => type == 'lent';
+  bool get isReceived => type == 'borrowed';
   bool get isPending => status == 'pending';
   bool get isCompleted => status == 'completed';
 
@@ -46,65 +42,36 @@ class FriendTransactionModel {
     return dueDate!.isBefore(DateTime.now());
   }
 
-  // ── SQLite serialization (backward compatible with TransferScreen) ──
+  // ── Supabase serialization (Friends Wallet) ──
 
   Map<String, dynamic> toMap() => {
-        'id': id,
         'friend_name': friendName,
         'amount': amount,
         'type': type,
-        'date': date.toIso8601String(),
-        'note': note ?? '',
-        'user_id': userId,
-      };
-
-  factory FriendTransactionModel.fromMap(Map<String, dynamic> map) =>
-      FriendTransactionModel(
-        id: map['id'] as int?,
-        friendName: map['friend_name'] as String,
-        amount: (map['amount'] as num).toDouble(),
-        type: map['type'] as String,
-        date: DateTime.parse(map['date'] as String),
-        note: map['note'] as String?,
-        userId: map['user_id'] as int,
-      );
-
-  // ── Firestore serialization (Friends Wallet) ──
-
-  Map<String, dynamic> toFirestore() => {
-        'friendName': friendName,
-        'amount': amount,
-        'type': type,
-        'date': date.toIso8601String(),
-        'dueDate': dueDate?.toIso8601String(),
+        'due_date': dueDate?.toIso8601String(),
         'status': status,
         'note': note ?? '',
-        'createdAt': createdAt.toIso8601String(),
+        'created_at': createdAt.toIso8601String(),
       };
 
-  factory FriendTransactionModel.fromFirestore(
-    String docId,
-    Map<String, dynamic> data,
-  ) =>
+  factory FriendTransactionModel.fromMap(Map<String, dynamic> data) =>
       FriendTransactionModel(
-        docId: docId,
-        friendName: data['friendName'] as String? ?? '',
+        id: data['id']?.toString() ?? '',
+        friendName: data['friend_name'] as String? ?? '',
         amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
-        type: data['type'] as String? ?? 'given',
-        date: DateTime.tryParse(data['date'] as String? ?? '') ?? DateTime.now(),
-        dueDate: data['dueDate'] != null
-            ? DateTime.tryParse(data['dueDate'] as String)
+        type: data['type'] as String? ?? 'lent',
+        date: DateTime.tryParse(data['created_at']?.toString() ?? '') ?? DateTime.now(),
+        dueDate: data['due_date'] != null
+            ? DateTime.tryParse(data['due_date']?.toString() ?? '')
             : null,
         status: data['status'] as String? ?? 'pending',
         note: data['note'] as String?,
-        userId: 0,
-        createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ??
+        createdAt: DateTime.tryParse(data['created_at']?.toString() ?? '') ??
             DateTime.now(),
       );
 
   FriendTransactionModel copyWith({
-    int? id,
-    String? docId,
+    String? id,
     String? friendName,
     double? amount,
     String? type,
@@ -112,12 +79,10 @@ class FriendTransactionModel {
     DateTime? dueDate,
     String? status,
     String? note,
-    int? userId,
     DateTime? createdAt,
   }) =>
       FriendTransactionModel(
         id: id ?? this.id,
-        docId: docId ?? this.docId,
         friendName: friendName ?? this.friendName,
         amount: amount ?? this.amount,
         type: type ?? this.type,
@@ -125,7 +90,6 @@ class FriendTransactionModel {
         dueDate: dueDate ?? this.dueDate,
         status: status ?? this.status,
         note: note ?? this.note,
-        userId: userId ?? this.userId,
         createdAt: createdAt ?? this.createdAt,
       );
 }

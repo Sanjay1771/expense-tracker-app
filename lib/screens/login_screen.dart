@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _auth = AuthService();
 
   bool _loading = false;
+  bool _googleLoading = false;
   bool _obscure = true;
   String? _error;
 
@@ -64,6 +65,26 @@ class _LoginScreenState extends State<LoginScreen>
         setState(() => _error = err);
       } else {
         widget.onLoginSuccess();
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _googleLoading = true;
+      _error = null;
+    });
+    try {
+      await _auth.signInWithGoogle();
+      // The actual sign-in completion is handled by the AuthGate's
+      // Supabase auth state listener (in main.dart).
+      // The OAuth flow opens the browser, so we just wait.
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _googleLoading = false;
+          _error = 'Google Sign-In failed. Please try again.';
+        });
       }
     }
   }
@@ -275,6 +296,99 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                       ),
                     ),
+
+                    // ── OR Divider ──────────────────────────────
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: AppTheme.textMuted.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OR',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: AppTheme.textMuted.withValues(alpha: 0.2),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Continue with Google Button ─────────────
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: _googleLoading ? null : _signInWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: AppTheme.bgCard,
+                          side: BorderSide(
+                            color: AppTheme.textMuted.withValues(alpha: 0.2),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.r16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _googleLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Google "G" logo via text rendering
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'G',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF4285F4),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Continue with Google',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -339,3 +453,4 @@ class _LoginScreenState extends State<LoginScreen>
           fontWeight: FontWeight.w600,
           color: AppTheme.textSecondary));
 }
+

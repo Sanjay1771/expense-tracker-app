@@ -18,8 +18,8 @@ class TransactionTile extends StatelessWidget {
 
   /// The display title: use note if available, otherwise category name
   String get _displayTitle {
-    if (transaction.note != null && transaction.note!.isNotEmpty) {
-      return transaction.note!;
+    if (transaction.notes != null && transaction.notes!.isNotEmpty) {
+      return transaction.notes!;
     }
     return transaction.category;
   }
@@ -146,8 +146,8 @@ class TransactionTile extends StatelessWidget {
                       category.color,
                     ),
                     // Note row (only if note exists)
-                    if (transaction.note != null &&
-                        transaction.note!.isNotEmpty) ...[
+                    if (transaction.notes != null &&
+                        transaction.notes!.isNotEmpty) ...[
                       Padding(
                         padding:
                             const EdgeInsets.symmetric(vertical: 10),
@@ -160,7 +160,7 @@ class TransactionTile extends StatelessWidget {
                       _detailRow(
                         Icons.sticky_note_2_rounded,
                         'Note',
-                        transaction.note!,
+                        transaction.notes!,
                         AppTheme.neonPurple,
                       ),
                     ],
@@ -319,7 +319,7 @@ class TransactionTile extends StatelessWidget {
     final amountColor = isIncome ? AppTheme.neonGreen : AppTheme.neonRed;
     final prefix = isIncome ? '+' : '-';
     final hasNote =
-        transaction.note != null && transaction.note!.isNotEmpty;
+        transaction.notes != null && transaction.notes!.isNotEmpty;
 
     // Tap to show full details (with delete option inside)
     return GestureDetector(

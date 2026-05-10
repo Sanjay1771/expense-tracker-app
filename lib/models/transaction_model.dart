@@ -92,114 +92,63 @@ class AppCategories {
   }
 }
 
-/// Main transaction model – now includes userId for multi-user support
+/// Main transaction model
 class TransactionModel {
-  final int? id;
-  final String? docId; // Firestore document ID
-  final String title;
+  final String id;
   final double amount;
   final String category;
   final DateTime date;
-  final String? note;
+  final String? notes;
   final TransactionType type;
-  final int userId; // Links transaction to a specific user
 
   TransactionModel({
-    this.id,
-    this.docId,
-    required this.title,
+    required this.id,
     required this.amount,
     required this.category,
     required this.date,
-    this.note,
+    this.notes,
     required this.type,
-    required this.userId,
   });
-
-  /// Convert transaction to a map for database storage
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'amount': amount,
-      'category': category,
-      'date': date.toIso8601String(),
-      'note': note ?? '',
-      'type': type == TransactionType.income ? 'income' : 'expense',
-      'user_id': userId,
-    };
-  }
 
   /// Create a transaction from a database map
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
-      id: map['id'] as int?,
-      title: map['title'] as String,
-      amount: (map['amount'] as num).toDouble(),
-      category: map['category'] as String,
-      date: DateTime.parse(map['date'] as String),
-      note: map['note'] as String?,
+      id: map['id']?.toString() ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      category: map['category'] as String? ?? 'Other',
+      date: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
+      notes: map['notes'] as String?,
       type: map['type'] == 'income'
           ? TransactionType.income
           : TransactionType.expense,
-      userId: map['user_id'] as int,
     );
   }
 
-  // ── Firestore serialization ──
+  // ── Supabase serialization ──
 
-  Map<String, dynamic> toFirestore() => {
-        'title': title,
+  Map<String, dynamic> toMap() => {
         'amount': amount,
         'type': type == TransactionType.income ? 'income' : 'expense',
         'category': category,
-        'date': date.toIso8601String(),
-        'notes': note ?? '',
-        'userId': userId.toString(),
-        'createdAt': DateTime.now().toIso8601String(),
+        'created_at': date.toIso8601String(),
+        'notes': notes ?? '',
       };
 
-  factory TransactionModel.fromFirestore(
-    String docId,
-    Map<String, dynamic> data,
-  ) {
-    return TransactionModel(
-      docId: docId,
-      title: data['title'] as String? ?? data['category'] as String? ?? '',
-      amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
-      category: data['category'] as String? ?? 'Other',
-      date: DateTime.tryParse(data['date'] as String? ?? '') ?? DateTime.now(),
-      note: (data['notes'] as String?)?.isNotEmpty == true
-          ? data['notes'] as String
-          : data['note'] as String?,
-      type: data['type'] == 'income'
-          ? TransactionType.income
-          : TransactionType.expense,
-      userId: int.tryParse(data['userId']?.toString() ?? '') ?? 0,
-    );
-  }
-
   TransactionModel copyWith({
-    int? id,
-    String? docId,
-    String? title,
+    String? id,
     double? amount,
     String? category,
     DateTime? date,
-    String? note,
+    String? notes,
     TransactionType? type,
-    int? userId,
   }) {
     return TransactionModel(
       id: id ?? this.id,
-      docId: docId ?? this.docId,
-      title: title ?? this.title,
       amount: amount ?? this.amount,
       category: category ?? this.category,
       date: date ?? this.date,
-      note: note ?? this.note,
+      notes: notes ?? this.notes,
       type: type ?? this.type,
-      userId: userId ?? this.userId,
     );
   }
 

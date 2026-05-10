@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
 import 'export_report_screen.dart';
-import 'recurring_screen.dart';
+
 import 'calendar_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -25,7 +25,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _darkMode = true;
   bool _notifications = true;
   String _currency = '₹ INR';
-  double _monthlyBudget = 0;
 
   final _currencies = ['₹ INR', '\$ USD', '€ EUR', '£ GBP', '¥ JPY'];
 
@@ -52,11 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _loadSettings() async {
     final isDark = await _settings.getThemeMode();
-    final budget = await _settings.getMonthlyBudget(_auth.userId);
     if (mounted) {
       setState(() {
         _darkMode = isDark;
-        _monthlyBudget = budget;
       });
     }
   }
@@ -97,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
     if (ok == true) {
-      await _auth.logout();
+      await _auth.logout(); // Clears local + Firebase + Supabase sessions
       widget.onLogout();
     }
   }
@@ -217,9 +214,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 16),
 
-          // ── Name ──
+          // ── Name (shows Google name if available) ──
           Text(
-            'SmartSpend User',
+            _auth.displayName,
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -236,9 +233,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              FirebaseAuth.instance.currentUser == null
+              Supabase.instance.client.auth.currentUser == null
                   ? 'No user logged in'
-                  : FirebaseAuth.instance.currentUser?.email ?? 'Email not available',
+                  : Supabase.instance.client.auth.currentUser?.email ?? 'Email not available',
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -270,15 +267,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildQuickStats() {
     return Row(
       children: [
-        _statCard(
-          icon: Icons.account_balance_wallet_rounded,
-          label: 'Budget',
-          value: _monthlyBudget > 0
-              ? '₹${_monthlyBudget.toStringAsFixed(0)}'
-              : 'Not set',
-          color: AppTheme.neonBlue,
-        ),
-        const SizedBox(width: 12),
         _statCard(
           icon: Icons.currency_exchange_rounded,
           label: 'Currency',
@@ -366,37 +354,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         Row(
           children: [
             _featureCard(
-              icon: Icons.account_balance_wallet_rounded,
-              label: 'Budget',
-              subtitle: 'Set monthly',
-              gradient: const [Color(0xFF00D4FF), Color(0xFF0097E6)],
-              onTap: _showBudgetDialog,
-            ),
-            const SizedBox(width: 12),
-            _featureCard(
-              icon: Icons.category_rounded,
-              label: 'Categories',
-              subtitle: 'Set limits',
-              gradient: const [Color(0xFFFF9100), Color(0xFFFF6D00)],
-              onTap: _showCategoryLimitsSheet,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _featureCard(
-              icon: Icons.repeat_rounded,
-              label: 'Recurring',
-              subtitle: 'Auto expenses',
-              gradient: const [Color(0xFFE040FB), Color(0xFFAB47BC)],
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RecurringScreen()),
-              ),
-            ),
-            const SizedBox(width: 12),
-            _featureCard(
               icon: Icons.picture_as_pdf_rounded,
               label: 'Export',
               subtitle: 'PDF report',
@@ -406,11 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 MaterialPageRoute(builder: (_) => const ExportReportScreen()),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
+            const SizedBox(width: 12),
             _featureCard(
               icon: Icons.calendar_month_rounded,
               label: 'Calendar',
@@ -615,8 +568,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               const SizedBox(height: 14),
               Text(
-                'Your AI-powered expense tracker that helps you manage finances, '
-                'set budgets, track recurring payments, and get smart insights — '
+                'manage finances, and get smart insights — '
                 'all in one beautiful app.',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
@@ -842,98 +794,4 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _showBudgetDialog() {
-    final ctrl = TextEditingController(text: _monthlyBudget > 0 ? _monthlyBudget.toStringAsFixed(0) : '');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
-        title: Text('Set Monthly Budget', style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: AppTheme.textPrimary),
-          decoration: const InputDecoration(hintText: 'Enter amount (e.g. 20000)', hintStyle: TextStyle(color: AppTheme.textMuted)),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final val = double.tryParse(ctrl.text) ?? 0;
-              await _settings.setMonthlyBudget(_auth.userId, val);
-              if (ctx.mounted) Navigator.pop(ctx);
-              _loadSettings();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCategoryLimitsSheet() async {
-    final categories = ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Other'];
-    final limits = <String, double>{};
-    for (final cat in categories) {
-      limits[cat] = await _settings.getCategoryBudget(_auth.userId, cat);
-    }
-
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.bgCard,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Category Limits', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-              const SizedBox(height: 20),
-              ...categories.map((cat) {
-                final ctrl = TextEditingController(text: limits[cat]! > 0 ? limits[cat]!.toStringAsFixed(0) : '');
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Expanded(flex: 2, child: Text(cat, style: const TextStyle(color: AppTheme.textSecondary))),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 3,
-                        child: TextField(
-                          controller: ctrl,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
-                          decoration: const InputDecoration(hintText: 'Limit', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                          onChanged: (v) {
-                            limits[cat] = double.tryParse(v) ?? 0;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    for (final entry in limits.entries) {
-                      await _settings.setCategoryBudget(_auth.userId, entry.key, entry.value);
-                    }
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  child: const Text('Save All Limits'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -112,7 +112,7 @@ class AIService {
     }
 
     if (totalExp > 10000) return "High expenses! Try reducing unnecessary shopping ⚠️";
-    if (totalExp < 2000 && totalExp > 0) return "Great job managing your budget! 🌟";
+    if (totalExp < 2000 && totalExp > 0) return "Great job managing your expenses! 🌟";
     
     // Category-specific suggestion
     String topCat = "None";

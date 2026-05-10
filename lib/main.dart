@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_config.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
@@ -14,34 +14,24 @@ import 'screens/profile_screen.dart';
 import 'screens/friends_screen.dart';
 import 'widgets/glowing_fab.dart';
 import 'services/settings_service.dart';
-import 'services/notification_service.dart';
-import 'services/background_service.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 
-/// Top-level FCM background handler (MUST be top-level, runs in separate isolate)
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  debugPrint('🔥 FCM background message: ${message.messageId}');
-  // Firebase automatically shows the notification for background messages
-  // This handler is for any additional data processing you need
-}
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase FIRST
+  // Initialize Firebase FIRST (kept during migration)
   await Firebase.initializeApp();
-  
-  // Register FCM background handler (before any other Firebase calls)
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Initialize notifications (local + FCM) early so they're ready before any screen loads
-  await NotificationService().initialize();
+  // Initialize Supabase (runs alongside Firebase — no conflicts)
+  await Supabase.initialize(
+    url: SupabaseConfig.supabaseUrl,
+    anonKey: SupabaseConfig.supabaseAnonKey,
+  );
+  debugPrint('✅ Supabase initialized successfully');
 
-  // Initialize WorkManager for background recurring transaction checks
-  await BackgroundService.initialize();
 
   final settings = SettingsService();
   final isDark = await settings.getThemeMode();
@@ -61,7 +51,7 @@ class ExpenseTrackerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
-      builder: (_, mode, __) {
+      builder: (context, mode, child) {
         return MaterialApp(
           title: 'Expense Tracker',
           debugShowCheckedModeBanner: false,
@@ -75,7 +65,7 @@ class ExpenseTrackerApp extends StatelessWidget {
   }
 }
 
-/// Checks login state natively via Firebase Auth with safe null handling
+/// Checks login state via Supabase Auth with safe null handling
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
   @override
@@ -87,39 +77,87 @@ class _AuthGateState extends State<AuthGate> {
   bool _loading = true;
   bool _loggedIn = false;
 
+  // Supabase auth subscription (listens for Google OAuth redirects)
+  late final dynamic _supabaseAuthSub;
+
   @override
   void initState() {
     super.initState();
     _checkAuth();
+    _listenToSupabaseAuth();
+  }
+
+  @override
+  void dispose() {
+    // Cancel the Supabase auth listener
+    try {
+      _supabaseAuthSub.cancel();
+    } catch (_) {}
+    super.dispose();
+  }
+
+  /// Listen for Supabase auth state changes (Google OAuth callback)
+  void _listenToSupabaseAuth() {
+    _supabaseAuthSub = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (data) async {
+        final event = data.event;
+        debugPrint('🔔 [AUTH] Supabase auth event: $event');
+
+        if (event == AuthChangeEvent.signedIn) {
+          // User returned from Google OAuth — sync session
+          final err = await _auth.handleSupabaseSession();
+          if (err == null && mounted) {
+            setState(() {
+              _loggedIn = true;
+              _loading = false;
+            });
+          } else {
+            debugPrint('⚠️ [AUTH] Supabase session sync failed: $err');
+          }
+        } else if (event == AuthChangeEvent.signedOut) {
+          if (mounted) {
+            setState(() => _loggedIn = false);
+          }
+        }
+      },
+      onError: (e) {
+        debugPrint('❌ [AUTH] Supabase auth listener error: $e');
+      },
+    );
   }
 
   Future<void> _checkAuth() async {
-    // 1. SAFELY check Firebase currentUser (MANDATORY NULL CHECK)
-    final User? firebaseUser = FirebaseAuth.instance.currentUser;
-    
-    // 2. If user == null -> Navigate to Login
-    if (firebaseUser == null) {
-      if (mounted) setState(() { _loggedIn = false; _loading = false; });
-      return;
+    // 1. Check for an existing Supabase session
+    final supabaseSession = Supabase.instance.client.auth.currentSession;
+    if (supabaseSession != null) {
+      debugPrint('🔵 [AUTH] Found existing Supabase session, syncing...');
+      final err = await _auth.handleSupabaseSession();
+      if (err == null) {
+        if (mounted) setState(() { _loggedIn = true; _loading = false; });
+        return;
+      }
+      debugPrint('⚠️ [AUTH] Supabase session sync failed: $err');
     }
 
-    // 3. User != null -> Safely synchronize our local SQLite dependencies so app doesn't crash
+    // 2. Try restoring from local SharedPreferences
     try {
       final ok = await _auth.tryAutoLogin();
-      if (!ok) {
-        // If SharedPreferences was cleared but Firebase is active, re-sync locally safely
-        await _auth.register(firebaseUser.email ?? 'unknown', 'sync123');
+      if (ok && mounted) {
+        setState(() { _loggedIn = true; _loading = false; });
+        return;
       }
-      if (mounted) setState(() { _loggedIn = true; _loading = false; });
     } catch (e) {
-      if (mounted) setState(() { _loggedIn = false; _loading = false; });
+      debugPrint('⚠️ [AUTH] Auto-login failed: $e');
     }
+
+    // 3. No session found → show login
+    if (mounted) setState(() { _loggedIn = false; _loading = false; });
   }
 
   void _onLogin() => setState(() => _loggedIn = true);
   
   void _onLogout() async {
-    await FirebaseAuth.instance.signOut(); // Ensure Firebase session clears
+    await _auth.logout(); // Clears local + Supabase session
     setState(() => _loggedIn = false);
   }
 

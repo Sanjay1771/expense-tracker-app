@@ -1,8 +1,6 @@
 // Signup screen — dark theme matching login design
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
@@ -66,40 +64,17 @@ class _SignupScreenState extends State<SignupScreen>
 
     debugPrint('🔵 [SIGNUP] Button clicked. Attempting signup for: $email');
 
-    try {
-      debugPrint('🔵 [SIGNUP] Before Firebase Auth createUser call...');
-      // 🔥 STRICT FIX: FORCE FIREBASE SIGNUP
-      final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-      
-      debugPrint('✅ [SIGNUP] Firebase Signup SUCCESS! User UID: ${userCredential.user?.uid}');
-      
-      // Sync local user so transactions and mapping don't crash the app
-      final localErr = await _auth.register(email, password);
-      if (localErr != null) {
-          debugPrint('⚠️ [SIGNUP] Local sync warned: $localErr');
-      }
+    final err = await _auth.register(email, password);
 
-      if (mounted) {
-        setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+      if (err != null) {
+        debugPrint('❌ [SIGNUP] Signup FAILED: $err');
+        setState(() => _error = err);
+      } else {
+        debugPrint('✅ [SIGNUP] Signup SUCCESS!');
         Navigator.pop(context); // close signup screen properly
         widget.onSignupSuccess(); // trigger home navigation callback
-      }
-    } on FirebaseAuthException catch (e) {
-      debugPrint('❌ [SIGNUP] Firebase Signup FAILED. Code: ${e.code}, Message: ${e.message}');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = e.message ?? 'Signup failed. Please try again.';
-        });
-      }
-    } catch (e) {
-      debugPrint('❌ [SIGNUP] Unknown Error: $e');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = 'An unexpected error occurred.';
-        });
       }
     }
   }

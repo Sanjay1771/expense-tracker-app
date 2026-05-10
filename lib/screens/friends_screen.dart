@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../models/friend_transaction_model.dart';
 import '../services/friend_service.dart';
-import '../services/reminder_service.dart';
+
 import '../theme/app_theme.dart';
 import 'export_friends_report_screen.dart';
 
@@ -20,14 +20,14 @@ class FriendsScreen extends StatefulWidget {
 class FriendsScreenState extends State<FriendsScreen>
     with SingleTickerProviderStateMixin {
   final _svc = FriendService();
-  final _reminder = ReminderService();
-  bool _checkedReminders = false;
+  bool _isLoading = true;
+  List<FriendTransactionModel> _allTransactions = [];
 
   late AnimationController _animCtrl;
   late Animation<double> _fadeAnim;
 
-  /// Called externally to refresh (StreamBuilder handles it automatically)
-  void loadData() => setState(() {});
+  /// Called externally to refresh
+  void loadData() => _loadData();
 
   @override
   void initState() {
@@ -36,6 +36,25 @@ class FriendsScreenState extends State<FriendsScreen>
         vsync: this, duration: const Duration(milliseconds: 500));
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _animCtrl.forward();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final data = await _svc.fetchFriendWallet();
+      if (mounted) {
+        setState(() {
+          _allTransactions = data;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ [FRIENDS SCREEN] _loadData error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -46,86 +65,77 @@ class FriendsScreenState extends State<FriendsScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.neonBlue));
+    }
+
+    final all = _allTransactions;
+
+    double totalGiven = 0, totalReceived = 0;
+    final dueSoon = <FriendTransactionModel>[];
+    final pending = <FriendTransactionModel>[];
+    final completed = <FriendTransactionModel>[];
+
+    for (final tx in all) {
+      if (tx.isGiven) totalGiven += tx.amount;
+      if (tx.isReceived) totalReceived += tx.amount;
+      if (tx.isPending) {
+        if (tx.isDueSoon || tx.isOverdue) {
+          dueSoon.add(tx);
+        } else {
+          pending.add(tx);
+        }
+      } else {
+        completed.add(tx);
+      }
+    }
+
     return FadeTransition(
       opacity: _fadeAnim,
-      child: StreamBuilder<List<FriendTransactionModel>>(
-        stream: _svc.streamFriendWallet(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppTheme.neonBlue));
-          }
-          if (snapshot.hasError) {
-            return _errorState(snapshot.error.toString());
-          }
-
-          final all = snapshot.data ?? [];
-
-          // One-time reminder check per session
-          if (!_checkedReminders && all.isNotEmpty) {
-            _checkedReminders = true;
-            _reminder.checkAndNotifyUpcoming(all);
-          }
-
-          double totalGiven = 0, totalReceived = 0;
-          final dueSoon = <FriendTransactionModel>[];
-          final pending = <FriendTransactionModel>[];
-          final completed = <FriendTransactionModel>[];
-
-          for (final tx in all) {
-            if (tx.isGiven) totalGiven += tx.amount;
-            if (tx.isReceived) totalReceived += tx.amount;
-            if (tx.isPending) {
-              if (tx.isDueSoon || tx.isOverdue) {
-                dueSoon.add(tx);
-              } else {
-                pending.add(tx);
-              }
-            } else {
-              completed.add(tx);
-            }
-          }
-
-          return CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics()),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _header(context, all),
-                      const SizedBox(height: 24),
-                      _summaryCards(totalGiven, totalReceived),
-                      const SizedBox(height: 28),
-                      if (dueSoon.isNotEmpty) ...[
-                        _sectionTitle('⚠️ Due Soon', AppTheme.neonOrange),
-                        const SizedBox(height: 14),
-                        ...dueSoon.map((t) => _txCard(t, highlighted: true)),
-                        const SizedBox(height: 28),
-                      ],
-                      _sectionTitle('⏳ Pending', AppTheme.neonBlue),
+      child: RefreshIndicator(
+        onRefresh: _loadData,
+        color: AppTheme.neonBlue,
+        backgroundColor: AppTheme.bgCard,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics()),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _header(context, all),
+                    const SizedBox(height: 24),
+                    _summaryCards(totalGiven, totalReceived),
+                    const SizedBox(height: 28),
+                    if (dueSoon.isNotEmpty) ...[
+                      _sectionTitle('⚠️ Due Soon', AppTheme.neonOrange),
                       const SizedBox(height: 14),
-                      if (pending.isEmpty)
-                        _emptyState('No pending transactions')
-                      else
-                        ...pending.map((t) => _txCard(t)),
+                      ...dueSoon.map((t) => _txCard(t, highlighted: true)),
                       const SizedBox(height: 28),
-                      if (completed.isNotEmpty) ...[
-                        _sectionTitle('✅ Completed', AppTheme.neonGreen),
-                        const SizedBox(height: 14),
-                        ...completed.map((t) => _txCard(t)),
-                      ],
-                      const SizedBox(height: 100),
                     ],
-                  ),
+                    _sectionTitle('⏳ Pending', AppTheme.neonBlue),
+                    const SizedBox(height: 14),
+                    if (pending.isEmpty)
+                      _emptyState('No pending transactions')
+                    else
+                      ...pending.map((t) => _txCard(t)),
+                    const SizedBox(height: 28),
+                    if (completed.isNotEmpty) ...[
+                      _sectionTitle('✅ Completed', AppTheme.neonGreen),
+                      const SizedBox(height: 14),
+                      ...completed.map((t) => _txCard(t)),
+                    ],
+                    const SizedBox(height: 100),
+                  ],
                 ),
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -375,7 +385,7 @@ class FriendsScreenState extends State<FriendsScreen>
     final amountCtrl = TextEditingController(
         text: existing != null ? existing.amount.toStringAsFixed(0) : '');
     final noteCtrl = TextEditingController(text: existing?.note ?? '');
-    String type = existing?.type ?? 'given';
+    String type = existing?.type ?? 'lent';
     DateTime? dueDate = existing?.dueDate;
     final isEdit = existing != null;
 
@@ -453,10 +463,10 @@ class FriendsScreenState extends State<FriendsScreen>
                   color: AppTheme.bgCardLight,
                   borderRadius: BorderRadius.circular(12)),
               child: Row(children: [
-                _toggleBtn('Given', type == 'given', AppTheme.neonRed,
-                    () => setSheetState(() => type = 'given')),
-                _toggleBtn('Received', type == 'received', AppTheme.neonGreen,
-                    () => setSheetState(() => type = 'received')),
+                _toggleBtn('Given', type == 'lent', AppTheme.neonRed,
+                    () => setSheetState(() => type = 'lent')),
+                _toggleBtn('Received', type == 'borrowed', AppTheme.neonGreen,
+                    () => setSheetState(() => type = 'borrowed')),
               ]),
             ),
             const SizedBox(height: 16),
@@ -529,7 +539,7 @@ class FriendsScreenState extends State<FriendsScreen>
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      type == 'given' ? AppTheme.neonRed : AppTheme.neonGreen,
+                      type == 'lent' ? AppTheme.neonRed : AppTheme.neonGreen,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -559,6 +569,7 @@ class FriendsScreenState extends State<FriendsScreen>
     if (name.isEmpty || amount == null || amount <= 0) return;
 
     final tx = FriendTransactionModel(
+      id: '',
       friendName: name,
       amount: amount,
       type: type,
@@ -566,27 +577,17 @@ class FriendsScreenState extends State<FriendsScreen>
       dueDate: dueDate,
       status: existing?.status ?? 'pending',
       note: note.isNotEmpty ? note : null,
-      userId: 0,
       createdAt: existing?.createdAt ?? DateTime.now(),
     );
 
-    if (existing?.docId != null) {
-      await _svc.updateWalletTransaction(existing!.docId!, tx);
-      // Reschedule reminder
-      await _reminder.cancelFriendReminder(existing.docId!);
-      if (tx.dueDate != null && tx.isPending) {
-        final updated = tx.copyWith(docId: existing.docId);
-        await _reminder.scheduleFriendReminder(updated);
-      }
+    if (existing?.id != null && existing!.id.isNotEmpty) {
+      await _svc.updateWalletTransaction(existing.id, tx);
     } else {
-      final docId = await _svc.addWalletTransaction(tx);
-      if (docId != null && tx.dueDate != null) {
-        final withId = tx.copyWith(docId: docId);
-        await _reminder.scheduleFriendReminder(withId);
-      }
+      await _svc.addWalletTransaction(tx);
     }
 
     if (ctx.mounted) Navigator.pop(ctx);
+    _loadData();
   }
 
   // ═══════════════════════════════════════════════════════
@@ -594,15 +595,10 @@ class FriendsScreenState extends State<FriendsScreen>
   // ═══════════════════════════════════════════════════════
 
   Future<void> _toggleStatus(FriendTransactionModel tx) async {
-    if (tx.docId == null) return;
+    if (tx.id.isEmpty) return;
     final newStatus = tx.isPending ? 'completed' : 'pending';
-    await _svc.updateWalletStatus(tx.docId!, newStatus);
-
-    if (newStatus == 'completed') {
-      await _reminder.cancelFriendReminder(tx.docId!);
-    } else if (tx.dueDate != null) {
-      await _reminder.scheduleFriendReminder(tx.copyWith(status: newStatus));
-    }
+    await _svc.updateWalletStatus(tx.id, newStatus);
+    _loadData();
   }
 
   void _confirmDelete(FriendTransactionModel tx) {
@@ -627,10 +623,10 @@ class FriendsScreenState extends State<FriendsScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              if (tx.docId != null) {
-                await _svc.deleteWalletTransaction(tx.docId!);
-                await _reminder.cancelFriendReminder(tx.docId!);
+              if (tx.id.isNotEmpty) {
+                await _svc.deleteWalletTransaction(tx.id);
               }
+              _loadData();
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.neonRed,
@@ -701,24 +697,4 @@ class FriendsScreenState extends State<FriendsScreen>
         ]),
       );
 
-  Widget _errorState(String error) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: AppTheme.neonRed),
-            const SizedBox(height: 16),
-            Text('Something went wrong',
-                style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
-            const SizedBox(height: 8),
-            Text(error,
-                style: GoogleFonts.poppins(
-                    fontSize: 12, color: AppTheme.textMuted),
-                textAlign: TextAlign.center),
-          ]),
-        ),
-      );
 }

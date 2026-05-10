@@ -55,7 +55,7 @@ class DashboardSummary extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.bgCard,
           borderRadius: BorderRadius.circular(AppTheme.r16),
-          border: Border.all(color: color.withOpacity(0.1)),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,8 +172,7 @@ class TrendLineChart extends StatelessWidget {
           .fold(0.0, (sum, t) => sum + t.amount);
     });
 
-    final maxVal = dailySpending.reduce((a, b) => a > b ? a : b);
-
+    // maxVal is removed
     return Container(
       height: 180,
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -198,7 +197,7 @@ class TrendLineChart extends StatelessWidget {
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppTheme.neonBlue.withOpacity(0.1),
+                color: AppTheme.neonBlue.withValues(alpha: 0.1),
               ),
             ),
           ],

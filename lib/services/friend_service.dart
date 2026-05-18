@@ -1,243 +1,287 @@
-// Friend service — manages friends in a separate DB table
-// SQLite methods for TransferScreen + Firestore methods for Friends Wallet
+// Friend service managing independent accounts and transactions via Supabase
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/friend_model.dart';
 import '../models/friend_transaction_model.dart';
-import 'database_service.dart';
 
 class FriendService {
   static final FriendService _instance = FriendService._internal();
   factory FriendService() => _instance;
   FriendService._internal();
 
-  bool _tablesCreated = false;
+  SupabaseClient get _supabase => Supabase.instance.client;
+  String? get _uid => _supabase.auth.currentUser?.id;
 
-  /// Ensure friend table exists (safe to call multiple times)
-  Future<void> ensureFriendTables() async {
-    if (_tablesCreated) return;
-    final db = await DatabaseService().database;
+  // ═══════════════════════════════════════════════════════
+  // ── FRIENDS CRUD ──────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
 
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS friends(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        avatar_letter TEXT,
-        user_id INTEGER NOT NULL,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS friend_debts(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        friend_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        type TEXT NOT NULL, -- 'owe' (you owe friend) or 'owed' (friend owes you)
-        note TEXT,
-        date TEXT NOT NULL,
-        user_id INTEGER NOT NULL,
-        FOREIGN KEY (friend_id) REFERENCES friends(id),
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    ''');
-    
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS friend_transactions(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        friend_name TEXT NOT NULL,
-        amount REAL NOT NULL,
-        type TEXT NOT NULL, -- 'given' or 'received'
-        date TEXT NOT NULL,
-        note TEXT,
-        user_id INTEGER NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    ''');
-    _tablesCreated = true;
-  }
-
-  Future<int> addFriend(FriendModel friend) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    return await db.insert('friends', friend.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  Future<List<FriendModel>> getFriends(int userId) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    final maps = await db.query(
-      'friends',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      orderBy: 'name ASC',
-    );
-    return maps.map((m) => FriendModel.fromMap(m)).toList();
-  }
-
-  Future<int> deleteFriend(int id) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    // Clean up debts too
-    await db.delete('friend_debts', where: 'friend_id = ?', whereArgs: [id]);
-    return await db.delete('friends', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // ─────────────────────────────────────────────────────
-  //  DEBT CRUD
-  // ─────────────────────────────────────────────────────
-
-  Future<int> addDebt(int friendId, double amount, String type, String? note, int userId) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    return await db.insert('friend_debts', {
-      'friend_id': friendId,
-      'amount': amount,
-      'type': type,
-      'note': note,
-      'date': DateTime.now().toIso8601String(),
-      'user_id': userId,
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getDebts(int userId) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    return await db.rawQuery('''
-      SELECT d.*, f.name as friend_name 
-      FROM friend_debts d 
-      JOIN friends f ON d.friend_id = f.id 
-      WHERE d.user_id = ? 
-      ORDER BY d.date DESC
-    ''', [userId]);
-  }
-
-  Future<int> deleteDebt(int id) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    return await db.delete('friend_debts', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // ─────────────────────────────────────────────────────
-  //  FRIEND TRANSACTIONS CRUD (Separate from main)
-  // ─────────────────────────────────────────────────────
-
-  Future<int> addFriendTransaction(FriendTransactionModel ft) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    return await db.insert('friend_transactions', ft.toMap());
-  }
-
-  Future<List<FriendTransactionModel>> getFriendTransactions(int userId) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    final maps = await db.query(
-      'friend_transactions',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      orderBy: 'date DESC',
-    );
-    return maps.map((m) => FriendTransactionModel.fromMap(m)).toList();
-  }
-
-  Future<int> deleteFriendTransaction(int id) async {
-    await ensureFriendTables();
-    final db = await DatabaseService().database;
-    return await db.delete('friend_transactions', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // ─────────────────────────────────────────────────────
-  //  FIRESTORE — FRIENDS WALLET (Real-time, separate)
-  // ─────────────────────────────────────────────────────
-
-  /// Get the Firestore collection reference for the current user
-  CollectionReference<Map<String, dynamic>>? _walletCollection() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      debugPrint('⚠️ [FRIENDS WALLET] No Firebase user signed in');
-      return null;
-    }
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('friends_transactions');
-  }
-
-  /// Real-time stream of all friend wallet transactions
-  Stream<List<FriendTransactionModel>> streamFriendWallet() {
-    final col = _walletCollection();
-    if (col == null) return Stream.value([]);
-
-    return col
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) =>
-                FriendTransactionModel.fromFirestore(doc.id, doc.data()))
-            .toList())
-        .handleError((e) {
-      debugPrint('❌ [FRIENDS WALLET] Stream error: $e');
-    });
-  }
-
-  /// Add a friend transaction to Firestore
-  Future<String?> addWalletTransaction(FriendTransactionModel ft) async {
+  /// Add a new friend entry
+  Future<FriendModel?> addFriend(String name, [String? phone, String? imageUrl]) async {
     try {
-      final col = _walletCollection();
-      if (col == null) return null;
-      final doc = await col.add(ft.toFirestore());
-      debugPrint('✅ [FRIENDS WALLET] Added: ${doc.id}');
-      return doc.id;
+      final uid = _uid;
+      if (uid == null) {
+        debugPrint('⚠️ [FRIEND SERVICE] No user signed in');
+        return null;
+      }
+
+      final payload = {
+        'user_id': uid,
+        'name': name.trim(),
+        if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+        if (imageUrl != null && imageUrl.trim().isNotEmpty) 'image_url': imageUrl.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      debugPrint('🔵 [FRIEND SERVICE] Adding friend: $payload');
+
+      final response = await _supabase.from('friends').insert(payload).select().single();
+      final newFriend = FriendModel.fromMap(response);
+      debugPrint('✅ [FRIEND SERVICE] Friend added: ${newFriend.id}');
+      return newFriend;
     } catch (e) {
-      debugPrint('❌ [FRIENDS WALLET] Add failed: $e');
+      debugPrint('❌ [FRIEND SERVICE] addFriend error: $e');
       return null;
     }
   }
 
-  /// Update a friend transaction in Firestore
-  Future<bool> updateWalletTransaction(
-      String docId, FriendTransactionModel ft) async {
+  /// Get all friends for current user
+  Future<List<FriendModel>> getFriends() async {
     try {
-      final col = _walletCollection();
-      if (col == null) return false;
-      await col.doc(docId).update(ft.toFirestore());
-      debugPrint('✅ [FRIENDS WALLET] Updated: $docId');
+      final uid = _uid;
+      if (uid == null) return [];
+
+      final data = await _supabase
+          .from('friends')
+          .select()
+          .eq('user_id', uid)
+          .order('name', ascending: true);
+
+      return (data as List).map((row) => FriendModel.fromMap(row)).toList();
+    } catch (e) {
+      debugPrint('❌ [FRIEND SERVICE] getFriends error: $e');
+      return [];
+    }
+  }
+
+  /// Get a single friend by ID
+  Future<FriendModel?> getFriendById(String friendId) async {
+    try {
+      final uid = _uid;
+      if (uid == null) return null;
+
+      final data = await _supabase
+          .from('friends')
+          .select()
+          .eq('id', friendId)
+          .eq('user_id', uid)
+          .maybeSingle();
+
+      if (data == null) return null;
+      return FriendModel.fromMap(data);
+    } catch (e) {
+      debugPrint('❌ [FRIEND SERVICE] getFriendById error: $e');
+      return null;
+    }
+  }
+
+  /// Update a friend entry
+  Future<bool> updateFriend(FriendModel friend) async {
+    try {
+      final uid = _uid;
+      if (uid == null) return false;
+
+      final payload = {
+        'name': friend.name.trim(),
+        if (friend.phone != null) 'phone': friend.phone!.trim(),
+        if (friend.imageUrl != null) 'image_url': friend.imageUrl!.trim(),
+      };
+      debugPrint('🔵 [FRIEND SERVICE] Updating friend ${friend.id}: $payload');
+
+      await _supabase.from('friends').update(payload).eq('id', friend.id).eq('user_id', uid);
+      debugPrint('✅ [FRIEND SERVICE] Friend updated successfully');
       return true;
     } catch (e) {
-      debugPrint('❌ [FRIENDS WALLET] Update failed: $e');
+      debugPrint('❌ [FRIEND SERVICE] updateFriend error: $e');
       return false;
     }
   }
 
-  /// Toggle status between pending/completed
-  Future<bool> updateWalletStatus(String docId, String status) async {
+  /// Delete a friend (automatically cascades transactions)
+  Future<bool> deleteFriend(String friendId) async {
     try {
-      final col = _walletCollection();
-      if (col == null) return false;
-      await col.doc(docId).update({'status': status});
-      debugPrint('✅ [FRIENDS WALLET] Status → $status for $docId');
+      final uid = _uid;
+      if (uid == null) return false;
+      debugPrint('🔵 [FRIEND SERVICE] Deleting friend $friendId...');
+
+      // Defensive deletion: remove transactions explicitly first
+      await _supabase
+          .from('friends_transactions')
+          .delete()
+          .eq('friend_id', friendId)
+          .eq('user_id', uid);
+
+      await _supabase.from('friends').delete().eq('id', friendId).eq('user_id', uid);
+      debugPrint('✅ [FRIEND SERVICE] Friend $friendId deleted successfully');
       return true;
     } catch (e) {
-      debugPrint('❌ [FRIENDS WALLET] Status update failed: $e');
+      debugPrint('❌ [FRIEND SERVICE] deleteFriend error: $e');
       return false;
     }
   }
 
-  /// Delete a friend transaction from Firestore
-  Future<bool> deleteWalletTransaction(String docId) async {
+  // ═══════════════════════════════════════════════════════
+  // ── TRANSACTIONS CRUD ─────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+
+  /// Add a transaction for a friend
+  Future<String?> addFriendTransaction({
+    required String friendId,
+    required double amount,
+    required String type, // 'given' or 'received'
+    String? note,
+  }) async {
     try {
-      final col = _walletCollection();
-      if (col == null) return false;
-      await col.doc(docId).delete();
-      debugPrint('✅ [FRIENDS WALLET] Deleted: $docId');
+      final uid = _uid;
+      if (uid == null) return null;
+
+      final payload = {
+        'user_id': uid,
+        'friend_id': friendId,
+        'amount': amount,
+        'type': type.toLowerCase(),
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      debugPrint('🔵 [FRIEND SERVICE] Adding transaction: $payload');
+
+      final response = await _supabase.from('friends_transactions').insert(payload).select('id').single();
+      final txId = response['id']?.toString();
+      debugPrint('✅ [FRIEND SERVICE] Transaction added: $txId');
+      return txId;
+    } catch (e) {
+      debugPrint('❌ [FRIEND SERVICE] addFriendTransaction error: $e');
+      return null;
+    }
+  }
+
+  /// Get all transactions for a specific friend
+  Future<List<FriendTransactionModel>> getTransactionsByFriend(String friendId) async {
+    try {
+      final uid = _uid;
+      if (uid == null) return [];
+
+      final data = await _supabase
+          .from('friends_transactions')
+          .select()
+          .eq('friend_id', friendId)
+          .eq('user_id', uid)
+          .order('created_at', ascending: false);
+
+      return (data as List).map((row) => FriendTransactionModel.fromMap(row)).toList();
+    } catch (e) {
+      debugPrint('❌ [FRIEND SERVICE] getTransactionsByFriend error: $e');
+      return [];
+    }
+  }
+
+  /// Update a friend transaction
+  Future<bool> updateFriendTransaction(String txId, FriendTransactionModel tx) async {
+    try {
+      final uid = _uid;
+      if (uid == null) return false;
+
+      final payload = {
+        'amount': tx.amount,
+        'type': tx.type.toLowerCase(),
+        if (tx.note != null) 'note': tx.note!.trim(),
+      };
+      debugPrint('🔵 [FRIEND SERVICE] Updating transaction $txId: $payload');
+
+      await _supabase.from('friends_transactions').update(payload).eq('id', txId).eq('user_id', uid);
+      debugPrint('✅ [FRIEND SERVICE] Transaction updated');
       return true;
     } catch (e) {
-      debugPrint('❌ [FRIENDS WALLET] Delete failed: $e');
+      debugPrint('❌ [FRIEND SERVICE] updateFriendTransaction error: $e');
       return false;
+    }
+  }
+
+  /// Delete a friend transaction
+  Future<bool> deleteFriendTransaction(String txId) async {
+    try {
+      final uid = _uid;
+      if (uid == null) return false;
+      debugPrint('🔵 [FRIEND SERVICE] Deleting transaction $txId');
+
+      await _supabase.from('friends_transactions').delete().eq('id', txId).eq('user_id', uid);
+      debugPrint('✅ [FRIEND SERVICE] Transaction deleted');
+      return true;
+    } catch (e) {
+      debugPrint('❌ [FRIEND SERVICE] deleteFriendTransaction error: $e');
+      return false;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ── CALCULATIONS & SUMMARY ────────────────────────────
+  // ═══════════════════════════════════════════════════════
+
+  /// Calculate summary for a friend
+  Future<FriendSummary> getFriendSummary(String friendId) async {
+    try {
+      final txns = await getTransactionsByFriend(friendId);
+      double totalGiven = 0;
+      double totalReceived = 0;
+
+      for (final t in txns) {
+        if (t.isGiven) totalGiven += t.amount;
+        if (t.isReceived) totalReceived += t.amount;
+      }
+
+      final balance = totalGiven - totalReceived;
+      final count = txns.length;
+      final status = balance == 0 ? 'Settled' : 'Pending';
+
+      return FriendSummary(
+        totalGiven: totalGiven,
+        totalReceived: totalReceived,
+        balance: balance,
+        transactionCount: count,
+        status: status,
+      );
+    } catch (e) {
+      debugPrint('❌ [FRIEND SERVICE] getFriendSummary error: $e');
+      return FriendSummary.empty();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ── COMPATIBILITY METHODS ─────────────────────────────
+  // ═══════════════════════════════════════════════════════
+
+  /// Fetch all transactions for all friends (used by reports)
+  Future<List<FriendTransactionModel>> fetchFriendWallet() async {
+    try {
+      final uid = _uid;
+      if (uid == null) return [];
+
+      final friends = await getFriends();
+      final friendMap = {for (final f in friends) f.id: f.name};
+
+      final data = await _supabase
+          .from('friends_transactions')
+          .select()
+          .eq('user_id', uid)
+          .order('created_at', ascending: false);
+
+      return (data as List).map((row) {
+        final friendId = row['friend_id']?.toString() ?? '';
+        final friendName = friendMap[friendId] ?? 'Unknown Friend';
+        return FriendTransactionModel.fromMap(row, friendName: friendName);
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ [FRIEND SERVICE] fetchFriendWallet error: $e');
+      return [];
     }
   }
 }

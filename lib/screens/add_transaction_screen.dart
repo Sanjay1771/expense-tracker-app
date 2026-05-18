@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -24,7 +24,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
   final _amountCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _categoryDescCtrl = TextEditingController(); // mini-note for detail categories
-  final _fs = FirestoreService();
+  final _db = SupabaseDbService();
   final _auth = AuthService();
 
   TransactionType _type = TransactionType.expense;
@@ -130,41 +130,56 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
     final amount = double.parse(_amountCtrl.text);
     final categoryName = _category!.name;
 
-    await _fs.addTransaction(TransactionModel(
-      title: categoryName,
-      amount: amount,
-      category: categoryName,
-      date: _date,
-      note: finalNote,
-      type: _type,
-      userId: _auth.userId,
-    ));
-
-    if (mounted) {
-      setState(() => _saving = false);
-
-      // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Row(children: [
-          const Icon(Icons.check_circle_rounded,
-              color: AppTheme.neonGreen, size: 20),
-          const SizedBox(width: 10),
-          Text('Transaction added!',
-              style: GoogleFonts.poppins(color: Colors.white)),
-        ]),
-        backgroundColor: AppTheme.bgCard,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(milliseconds: 1200),
+    try {
+      await _db.addTransaction(TransactionModel(
+        title: categoryName,
+        amount: amount,
+        category: categoryName,
+        date: _date,
+        note: finalNote,
+        type: _type,
+        userId: _auth.userId,
       ));
 
-      // Notify parent to refresh data, then navigate back to home
-      widget.onTransactionAdded?.call();
+      if (mounted) {
+        // Show success feedback
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Row(children: [
+            const Icon(Icons.check_circle_rounded,
+                color: AppTheme.neonGreen, size: 20),
+            const SizedBox(width: 10),
+            Text('Transaction added!',
+                style: GoogleFonts.poppins(color: Colors.white)),
+          ]),
+          backgroundColor: AppTheme.bgCard,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(milliseconds: 1200),
+        ));
 
-      // Small delay so user sees the snackbar, then auto-navigate home
-      await Future.delayed(const Duration(milliseconds: 400));
-      if (mounted) Navigator.pop(context);
+        // Notify parent to refresh data, then navigate back to home
+        widget.onTransactionAdded?.call();
+
+        // Small delay so user sees the snackbar, then auto-navigate home
+        await Future.delayed(const Duration(milliseconds: 400));
+        if (mounted) Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMsg = e.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(errorMsg, style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppTheme.neonRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 

@@ -203,6 +203,36 @@ class TransactionModel {
     );
   }
 
+  /// Helper getters for Supabase schema compatibility
+  String get description => (note != null && note!.trim().isNotEmpty) ? note! : title;
+  DateTime get transactionDate => date;
+
+  /// Convert transaction to a map for Supabase storage
+  Map<String, dynamic> toSupabase(String supabaseUserId) {
+    return {
+      'user_id': supabaseUserId,
+      'type': type == TransactionType.income ? 'income' : 'expense',
+      'category': category,
+      'amount': amount,
+      'description': description,
+      'transaction_date': transactionDate.toIso8601String(),
+    };
+  }
+
+  /// Create a transaction from a Supabase map
+  factory TransactionModel.fromSupabase(Map<String, dynamic> data) {
+    return TransactionModel(
+      docId: data['id']?.toString(),
+      title: data['category'] as String? ?? 'Other',
+      amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+      category: data['category'] as String? ?? 'Other',
+      date: DateTime.tryParse(data['transaction_date']?.toString() ?? '') ?? DateTime.now(),
+      note: data['description'] as String?,
+      type: data['type'] == 'income' ? TransactionType.income : TransactionType.expense,
+      userId: 0,
+    );
+  }
+
   /// Get the Category object for this transaction
   Category get categoryData => AppCategories.findByName(category);
 }

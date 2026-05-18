@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recurring_model.dart';
 import '../models/transaction_model.dart';
-import '../services/firestore_service.dart';
+import '../services/supabase_db_service.dart';
 
 class RecurringService {
   static final RecurringService _instance = RecurringService._internal();
@@ -138,7 +138,7 @@ class RecurringService {
       userId: userId,
     );
 
-    await FirestoreService().addTransaction(txn);
+    await SupabaseDbService().addTransaction(txn);
     debugPrint('🔁 Recurring transaction added: ${item.title} — ₹${item.amount} for ${forDate.toIso8601String()}');
   }
 

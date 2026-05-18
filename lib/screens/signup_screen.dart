@@ -1,8 +1,6 @@
 // Signup screen — dark theme matching login design
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
@@ -17,6 +15,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -47,6 +46,7 @@ class _SignupScreenState extends State<SignupScreen>
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
@@ -61,45 +61,30 @@ class _SignupScreenState extends State<SignupScreen>
       _error = null;
     });
 
+    final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     final password = _passCtrl.text;
 
-    debugPrint('🔵 [SIGNUP] Button clicked. Attempting signup for: $email');
+    debugPrint('🔵 [SIGNUP] Attempting Supabase signup for: $email');
 
-    try {
-      debugPrint('🔵 [SIGNUP] Before Firebase Auth createUser call...');
-      // 🔥 STRICT FIX: FORCE FIREBASE SIGNUP
-      final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-      
-      debugPrint('✅ [SIGNUP] Firebase Signup SUCCESS! User UID: ${userCredential.user?.uid}');
-      
-      // Sync local user so transactions and mapping don't crash the app
-      final localErr = await _auth.register(email, password);
-      if (localErr != null) {
-          debugPrint('⚠️ [SIGNUP] Local sync warned: $localErr');
-      }
+    final err = await _auth.registerWithSupabase(email, password, name);
 
-      if (mounted) {
-        setState(() => _loading = false);
-        Navigator.pop(context); // close signup screen properly
-        widget.onSignupSuccess(); // trigger home navigation callback
-      }
-    } on FirebaseAuthException catch (e) {
-      debugPrint('❌ [SIGNUP] Firebase Signup FAILED. Code: ${e.code}, Message: ${e.message}');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = e.message ?? 'Signup failed. Please try again.';
-        });
-      }
-    } catch (e) {
-      debugPrint('❌ [SIGNUP] Unknown Error: $e');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = 'An unexpected error occurred.';
-        });
+    if (mounted) {
+      setState(() => _loading = false);
+      if (err != null) {
+        setState(() => _error = err);
+      } else {
+        debugPrint('✅ [SIGNUP] Supabase Signup SUCCESS!');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account created successfully. Please log in.',
+                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500)),
+            backgroundColor: AppTheme.neonGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        Navigator.pop(context); // Redirect to login page
       }
     }
   }
@@ -211,6 +196,32 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                               const SizedBox(height: 16),
                             ],
+                            _lbl('Full Name / Username'),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _nameCtrl,
+                              textCapitalization: TextCapitalization.words,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: AppTheme.textPrimary),
+                              decoration: const InputDecoration(
+                                hintText: 'Enter your name',
+                                prefixIcon: Icon(
+                                    Icons.person_rounded,
+                                    color: AppTheme.textMuted,
+                                    size: 18),
+                              ),
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Enter your name';
+                                }
+                                if (v.trim().length < 2) {
+                                  return 'Minimum 2 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
                             _lbl('Email'),
                             const SizedBox(height: 8),
                             TextFormField(

@@ -2,8 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/supabase_config.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
@@ -33,7 +34,13 @@ void main() async {
   
   // Initialize Firebase FIRST
   await Firebase.initializeApp();
-  
+
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: SupabaseConfig.supabaseUrl,
+    anonKey: SupabaseConfig.supabaseAnonKey,
+  );
+
   // Register FCM background handler (before any other Firebase calls)
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -90,36 +97,33 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    _initAuthStateListener();
   }
 
-  Future<void> _checkAuth() async {
-    // 1. SAFELY check Firebase currentUser (MANDATORY NULL CHECK)
-    final User? firebaseUser = FirebaseAuth.instance.currentUser;
-    
-    // 2. If user == null -> Navigate to Login
-    if (firebaseUser == null) {
-      if (mounted) setState(() { _loggedIn = false; _loading = false; });
-      return;
-    }
-
-    // 3. User != null -> Safely synchronize our local SQLite dependencies so app doesn't crash
-    try {
-      final ok = await _auth.tryAutoLogin();
-      if (!ok) {
-        // If SharedPreferences was cleared but Firebase is active, re-sync locally safely
-        await _auth.register(firebaseUser.email ?? 'unknown', 'sync123');
+  void _initAuthStateListener() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      final session = data.session;
+      if (session == null) {
+        if (mounted) setState(() { _loggedIn = false; _loading = false; });
+        return;
       }
-      if (mounted) setState(() { _loggedIn = true; _loading = false; });
-    } catch (e) {
-      if (mounted) setState(() { _loggedIn = false; _loading = false; });
-    }
+
+      try {
+        final ok = await _auth.tryAutoLogin();
+        if (!ok) {
+          await _auth.syncSupabaseUser(session.user);
+        }
+        if (mounted) setState(() { _loggedIn = true; _loading = false; });
+      } catch (e) {
+        if (mounted) setState(() { _loggedIn = false; _loading = false; });
+      }
+    });
   }
 
   void _onLogin() => setState(() => _loggedIn = true);
   
   void _onLogout() async {
-    await FirebaseAuth.instance.signOut(); // Ensure Firebase session clears
+    await _auth.logout();
     setState(() => _loggedIn = false);
   }
 
@@ -186,7 +190,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   void _onTxnAdded() {
-    _homeKey.currentState?.loadData();
+    _homeKey.currentState?.loadTransactions();
     _friendsKey.currentState?.loadData();
     _analyticsKey.currentState?.loadData();
     // Navigate to home tab
@@ -203,8 +207,8 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  void _openAddScreen() {
-    Navigator.push(
+  void _openAddScreen() async {
+    final result = await Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
@@ -221,6 +225,10 @@ class _MainNavigationState extends State<MainNavigation> {
         },
       ),
     );
+
+    if (result == true) {
+      _onTxnAdded();
+    }
   }
 
 
@@ -245,9 +253,11 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
 
       // Expandable FAB
-      floatingActionButton: GlowingFab(
-        onAddTransaction: _openAddScreen,
-      ),
+      floatingActionButton: _idx == 0
+          ? GlowingFab(
+              onAddTransaction: _openAddScreen,
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
       // Bottom nav (synced with PageView)

@@ -68,6 +68,22 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  Future<void> _loginWithGoogle() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final err = await _auth.loginWithGoogle();
+    if (mounted) {
+      setState(() => _loading = false);
+      if (err != null) {
+        setState(() => _error = err);
+      } else {
+        widget.onLoginSuccess();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -271,6 +287,31 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(child: Divider(color: AppTheme.textMuted.withValues(alpha: 0.2))),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text('OR', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textMuted)),
+                                ),
+                                Expanded(child: Divider(color: AppTheme.textMuted.withValues(alpha: 0.2))),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                onPressed: _loading ? null : _loginWithGoogle,
+                                icon: const Icon(Icons.g_mobiledata_rounded, size: 32, color: AppTheme.neonBlue),
+                                label: Text('Sign in with Google', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.3)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.r16)),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -297,31 +338,6 @@ class _LoginScreenState extends State<LoginScreen>
                                   color: AppTheme.neonBlue)),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Test credentials
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.neonBlue
-                            .withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: AppTheme.neonBlue
-                                .withValues(alpha: 0.15)),
-                      ),
-                      child: Row(children: [
-                        const Icon(Icons.info_outline_rounded,
-                            color: AppTheme.neonBlue, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                              'Test: testuser@gmail.com / 123456',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: AppTheme.neonBlue)),
-                        ),
-                      ]),
                     ),
                   ],
                 ),

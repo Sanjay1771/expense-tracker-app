@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/transaction_tile.dart';
@@ -28,6 +29,7 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   final FirestoreService _fs = FirestoreService();
+  final SupabaseDbService _db = SupabaseDbService();
   final AuthService _auth = AuthService();
   List<TransactionModel> _transactions = [];
   double _totalIncome = 0;
@@ -49,7 +51,11 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    loadData();
+    loadTransactions();
+  }
+
+  Future<void> loadTransactions() async {
+    await loadData();
   }
 
   /// Load all data for the current user
@@ -60,9 +66,9 @@ class HomeScreenState extends State<HomeScreen> {
     // Check and add any due recurring transactions before loading
     await RecurringService().checkDueTransactions(uid);
 
-    final txns = await _fs.getTransactions();
-    final inc = await _fs.getTotalIncome();
-    final exp = await _fs.getTotalExpense();
+    final txns = await _db.getTransactions();
+    final inc = await _db.getTotalIncome();
+    final exp = await _db.getTotalExpense();
     final budget = await _settings.getMonthlyBudget(uid);
     final reminderMaps = await _fs.getReminders();
     final reminders = reminderMaps.map((m) => BillReminder.fromMap(m)).toList();
@@ -107,7 +113,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> _deleteTransaction(TransactionModel tx) async {
     if (tx.docId != null) {
-      await _fs.deleteTransaction(tx.docId!);
+      await _db.deleteTransaction(tx.docId!);
     }
     await loadData();
   }

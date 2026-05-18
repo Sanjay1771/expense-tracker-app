@@ -5,10 +5,12 @@ import '../theme/app_theme.dart';
 
 class GlowingFab extends StatefulWidget {
   final VoidCallback onAddTransaction;
+  final IconData icon;
 
   const GlowingFab({
     super.key,
     required this.onAddTransaction,
+    this.icon = Icons.add_rounded,
   });
 
   @override
@@ -69,8 +71,8 @@ class _GlowingFabState extends State<GlowingFab> with SingleTickerProviderStateM
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.add_rounded,
+              child: Icon(
+                widget.icon,
                 color: Colors.white,
                 size: 32,
               ),

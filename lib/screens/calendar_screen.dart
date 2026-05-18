@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/transaction_model.dart';
-import '../services/firestore_service.dart';
+import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 
 /// Calendar screen with spending heatmap.
@@ -30,7 +30,7 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen>
     with SingleTickerProviderStateMixin {
-  final _fs = FirestoreService();
+  final _db = SupabaseDbService();
 
   // Calendar state
   DateTime _focusedDay = DateTime.now();
@@ -71,7 +71,7 @@ class _CalendarScreenState extends State<CalendarScreen>
   /// Fetch all transactions, build the daily-totals map, and pick
   /// the transactions for the currently selected day.
   Future<void> _loadTransactions() async {
-    final txns = await _fs.getTransactions();
+    final txns = await _db.getTransactions();
     final Map<DateTime, double> totals = {};
 
     for (final t in txns) {

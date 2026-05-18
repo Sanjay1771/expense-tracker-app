@@ -4,8 +4,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/transaction_model.dart';
 import '../models/user_model.dart';
 
@@ -149,7 +149,7 @@ class DatabaseService {
   //  TRANSACTION METHODS (now filtered by userId)
   // ────────────────────────────────────────────────────────────
 
-  /// Insert a new transaction (Local SQLite + Firebase Firestore sync)
+  /// Insert a new transaction (Local SQLite + Supabase sync)
   Future<int> insertTransaction(TransactionModel transaction) async {
     final db = await database;
     
@@ -160,42 +160,37 @@ class DatabaseService {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    // 2. Sync to Firebase Firestore (Fire-and-forget for cloud backup)
-    _syncTransactionToFirestore(transaction, id);
+    // 2. Sync to Supabase (Fire-and-forget for cloud backup)
+    _syncTransactionToSupabase(transaction, id);
 
     return id;
   }
 
-  /// Private helper to sync a transaction to the user's Firestore collection
-  Future<void> _syncTransactionToFirestore(TransactionModel transaction, int localId) async {
+  /// Private helper to sync a transaction to the user's Supabase cloud storage
+  Future<void> _syncTransactionToSupabase(TransactionModel transaction, int localId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
-          print('⚠️ [FIRESTORE] No user logged in. Skipping sync.');
+          debugPrint('⚠️ [SUPABASE] No user logged in. Skipping sync.');
           return;
       }
 
-      final uid = user.uid;
-      final firestore = FirebaseFirestore.instance;
-
-      // 🔥 PRODUCTION SAFE: Use .add() to ensure a NEW document is created every time
-      await firestore
-          .collection('users')
-          .doc(uid)
-          .collection('transactions')
-          .add({
+      final uid = user.id;
+      await Supabase.instance.client
+          .from('transactions')
+          .insert({
+            'user_id': uid,
             'amount': transaction.amount,
             'type': transaction.type == TransactionType.income ? 'income' : 'expense',
             'category': transaction.category,
             'note': transaction.note ?? '',
-            'date': transaction.date.toIso8601String(), // ISO Format
-            'createdAt': FieldValue.serverTimestamp(), // Requested timestamp
-            'local_id': localId,
+            'date': transaction.date.toIso8601String(),
+            'created_at': DateTime.now().toIso8601String(),
           });
       
-      print('✅ [FIRESTORE] Production Sync SUCCESS for UID: $uid');
+      debugPrint('✅ [SUPABASE] Production Sync SUCCESS for UID: $uid');
     } catch (e) {
-      print('❌ [FIRESTORE] Production Sync FAILED: $e');
+      debugPrint('❌ [SUPABASE] Production Sync FAILED: $e');
     }
   }
 

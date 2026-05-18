@@ -1,18 +1,19 @@
-// Friend model for the friends/transfer feature
-// Stored in a separate table — no modifications to existing schema
+// Friend model representing an independent account for lending & borrowing
 import 'package:flutter/material.dart';
 
 class FriendModel {
-  final int? id;
+  final String id;
   final String name;
-  final String? avatarLetter; // First letter for avatar display
-  final int userId; // Owner of this friend entry
+  final String? phone;
+  final String? imageUrl;
+  final String userId;
   final DateTime createdAt;
 
   FriendModel({
-    this.id,
+    required this.id,
     required this.name,
-    this.avatarLetter,
+    this.phone,
+    this.imageUrl,
     required this.userId,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -20,7 +21,7 @@ class FriendModel {
   /// First letter for avatar circle
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-  /// A color derived from the name (consistent per name)
+  /// Consistent avatar color based on name hash
   Color get avatarColor {
     final colors = [
       const Color(0xFF00D4FF),
@@ -36,66 +37,61 @@ class FriendModel {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id,
+        if (id.isNotEmpty) 'id': id,
         'name': name,
-        'avatar_letter': avatarLetter ?? initial,
+        if (phone != null && phone!.isNotEmpty) 'phone': phone,
+        if (imageUrl != null && imageUrl!.isNotEmpty) 'image_url': imageUrl,
         'user_id': userId,
         'created_at': createdAt.toIso8601String(),
       };
 
   factory FriendModel.fromMap(Map<String, dynamic> map) => FriendModel(
-        id: map['id'] as int?,
-        name: map['name'] as String,
-        avatarLetter: map['avatar_letter'] as String?,
-        userId: map['user_id'] as int,
-        createdAt: DateTime.parse(map['created_at'] as String),
+        id: map['id']?.toString() ?? '',
+        name: map['name'] as String? ?? 'Unknown',
+        phone: map['phone'] as String?,
+        imageUrl: map['image_url'] as String?,
+        userId: map['user_id']?.toString() ?? '',
+        createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
+      );
+
+  FriendModel copyWith({
+    String? id,
+    String? name,
+    String? phone,
+    String? imageUrl,
+    String? userId,
+    DateTime? createdAt,
+  }) =>
+      FriendModel(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        phone: phone ?? this.phone,
+        imageUrl: imageUrl ?? this.imageUrl,
+        userId: userId ?? this.userId,
+        createdAt: createdAt ?? this.createdAt,
       );
 }
 
-/// Represents a money transfer to/from a friend
-class FriendTransfer {
-  final int? id;
-  final int friendId;
-  final String friendName;
-  final double amount;
-  final String direction; // 'given' or 'received'
-  final String? note;
-  final DateTime date;
-  final int userId;
+class FriendSummary {
+  final double totalGiven;
+  final double totalReceived;
+  final double balance;
+  final int transactionCount;
+  final String status;
 
-  FriendTransfer({
-    this.id,
-    required this.friendId,
-    required this.friendName,
-    required this.amount,
-    required this.direction,
-    this.note,
-    DateTime? date,
-    required this.userId,
-  }) : date = date ?? DateTime.now();
+  FriendSummary({
+    required this.totalGiven,
+    required this.totalReceived,
+    required this.balance,
+    required this.transactionCount,
+    required this.status,
+  });
 
-  bool get isGiven => direction == 'given';
-  bool get isReceived => direction == 'received';
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'friend_id': friendId,
-        'friend_name': friendName,
-        'amount': amount,
-        'direction': direction,
-        'note': note ?? '',
-        'date': date.toIso8601String(),
-        'user_id': userId,
-      };
-
-  factory FriendTransfer.fromMap(Map<String, dynamic> map) => FriendTransfer(
-        id: map['id'] as int?,
-        friendId: map['friend_id'] as int,
-        friendName: map['friend_name'] as String,
-        amount: (map['amount'] as num).toDouble(),
-        direction: map['direction'] as String,
-        note: map['note'] as String?,
-        date: DateTime.parse(map['date'] as String),
-        userId: map['user_id'] as int,
+  factory FriendSummary.empty() => FriendSummary(
+        totalGiven: 0.0,
+        totalReceived: 0.0,
+        balance: 0.0,
+        transactionCount: 0,
+        status: 'Pending',
       );
 }

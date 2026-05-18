@@ -4,7 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import '../services/firestore_service.dart';
+import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 
 class ExportReportScreen extends StatefulWidget {
@@ -15,14 +15,14 @@ class ExportReportScreen extends StatefulWidget {
 }
 
 class _ExportReportScreenState extends State<ExportReportScreen> {
-  final _fs = FirestoreService();
+  final _db = SupabaseDbService();
 
   Future<Uint8List> _generatePdf(PdfPageFormat format) async {
     final pdf = pw.Document();
-    final income = await _fs.getTotalIncome();
-    final expense = await _fs.getTotalExpense();
-    final cats = await _fs.getExpensesByCategory();
-    final txns = await _fs.getTransactions();
+    final income = await _db.getTotalIncome();
+    final expense = await _db.getTotalExpense();
+    final cats = await _db.getExpensesByCategory();
+    final txns = await _db.getTransactions();
 
     pdf.addPage(
       pw.MultiPage(

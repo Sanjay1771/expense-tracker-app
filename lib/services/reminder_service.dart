@@ -1,6 +1,4 @@
-// Reminder service for friend wallet transactions
-// Uses FCM topic-based reminders instead of local notifications
-// Friend due-date reminders are tracked in Firestore for server-side push
+// Reminder service for friend transactions (Legacy Firestore support)
 import 'package:flutter/foundation.dart';
 import '../models/friend_transaction_model.dart';
 import 'firestore_service.dart';
@@ -12,13 +10,11 @@ class ReminderService {
 
   final _fs = FirestoreService();
 
-  /// Schedule a reminder by saving it to Firestore
-  /// Server-side Cloud Functions can then send push notifications
   Future<void> scheduleFriendReminder(FriendTransactionModel tx) async {
-    if (tx.dueDate == null || tx.docId == null) return;
+    if (tx.id.isEmpty) return;
     if (tx.isCompleted) return;
 
-    final reminderDate = tx.dueDate!.subtract(const Duration(days: 2));
+    final reminderDate = DateTime.now().add(const Duration(days: 1));
     final direction = tx.isGiven ? 'to' : 'from';
 
     try {
@@ -28,17 +24,15 @@ class ReminderService {
         'user_id': 0,
         'is_completed': false,
         'type': 'friend_reminder',
-        'friendDocId': tx.docId,
+        'friendDocId': tx.id,
       });
-      debugPrint('🔔 Friend reminder saved for ${tx.friendName} at $reminderDate');
+      debugPrint('🔔 Friend reminder saved for ${tx.friendName}');
     } catch (e) {
       debugPrint('⚠️ Failed to save friend reminder: $e');
     }
   }
 
-  /// Cancel a scheduled reminder by marking it completed in Firestore
   Future<void> cancelFriendReminder(String docId) async {
-    // Find and delete reminder associated with this friend transaction
     try {
       final reminders = await _fs.getReminders();
       for (final r in reminders) {
@@ -52,12 +46,11 @@ class ReminderService {
     }
   }
 
-  /// On app open: log any due-soon transactions (notifications are handled server-side)
   Future<void> checkAndNotifyUpcoming(List<FriendTransactionModel> txns) async {
     for (final tx in txns) {
-      if (tx.isPending && (tx.isDueSoon || tx.isOverdue) && tx.docId != null) {
+      if (tx.isPending && tx.id.isNotEmpty) {
         final direction = tx.isGiven ? 'to' : 'from';
-        debugPrint('⏰ Due soon: ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName}');
+        debugPrint('⏰ Upcoming: ₹${tx.amount.toStringAsFixed(0)} $direction ${tx.friendName}');
       }
     }
   }

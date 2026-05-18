@@ -1,6 +1,4 @@
-// Premium dark gradient balance card with animated entrance
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class BalanceCard extends StatefulWidget {
@@ -35,10 +33,8 @@ class _BalanceCardState extends State<BalanceCard>
     _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
-    _slideAnim =
-        Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
-            .animate(CurvedAnimation(
-                parent: _controller, curve: Curves.easeOut));
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
   }
 
@@ -56,68 +52,64 @@ class _BalanceCardState extends State<BalanceCard>
         position: _slideAnim,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6C5CE7),
-                Color(0xFF4834DF),
-                Color(0xFF0652DD),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(AppTheme.r24),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF6C5CE7).withValues(alpha: 0.4),
-                blurRadius: 30,
-                offset: const Offset(0, 12),
-              ),
-            ],
+            gradient: AppTheme.primaryGradient,
+            borderRadius: BorderRadius.circular(AppTheme.r28),
+            boxShadow: AppTheme.neonGlow,
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Balance label
-              Text(
-                'Total Balance',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white.withValues(alpha: 0.75),
-                  letterSpacing: 1.2,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Balance',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          letterSpacing: 0.5,
+                        ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_rounded,
+                        color: Colors.white, size: 16),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
-              // Large balance number
               Text(
                 '₹${_fmt(widget.totalBalance)}',
-                style: GoogleFonts.poppins(
-                  fontSize: 38,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: -1,
-                ),
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Colors.white,
+                      fontSize: 40,
+                    ),
               ),
-              const SizedBox(height: 28),
-              // Income / Expense row
+              const SizedBox(height: 32),
               Row(
                 children: [
                   Expanded(
                     child: _infoChip(
+                      context: context,
                       icon: Icons.arrow_downward_rounded,
                       label: 'Income',
                       amount: widget.totalIncome,
-                      color: AppTheme.neonGreen,
+                      color: AppTheme.success,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: _infoChip(
+                      context: context,
                       icon: Icons.arrow_upward_rounded,
                       label: 'Expense',
                       amount: widget.totalExpense,
-                      color: AppTheme.neonRed,
+                      color: AppTheme.error,
                     ),
                   ),
                 ],
@@ -129,48 +121,45 @@ class _BalanceCardState extends State<BalanceCard>
     );
   }
 
-  /// Small chip showing income or expense summary
   Widget _infoChip({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required double amount,
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppTheme.r16),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
                 ),
                 Text(
                   '₹${_fmt(amount)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                      ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

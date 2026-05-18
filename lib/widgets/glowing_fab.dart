@@ -1,5 +1,3 @@
-// A glowing floating action button with neon pulse animation
-// Directly opens Add Transaction screen on tap (single action, no menu)
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
@@ -25,14 +23,13 @@ class _GlowingFabState extends State<GlowingFab> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    // Continuous pulse animation
     _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1800))
+        vsync: this, duration: const Duration(milliseconds: 2000))
       ..repeat(reverse: true);
 
-    _glowAnim = Tween<double>(begin: 0.25, end: 0.55).animate(
+    _glowAnim = Tween<double>(begin: 0.3, end: 0.6).animate(
         CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-    _scaleAnim = Tween<double>(begin: 1.0, end: 1.06).animate(
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.05).animate(
         CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
@@ -52,22 +49,16 @@ class _GlowingFabState extends State<GlowingFab> with SingleTickerProviderStateM
           child: GestureDetector(
             onTap: widget.onAddTransaction,
             child: Container(
-              width: 62,
-              height: 62,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.neonBlue.withValues(alpha: _glowAnim.value),
-                    blurRadius: 25,
-                    spreadRadius: 2,
-                  ),
-                  BoxShadow(
-                    color: AppTheme.neonPurple
-                        .withValues(alpha: _glowAnim.value * 0.6),
-                    blurRadius: 40,
-                    spreadRadius: 0,
+                    color: AppTheme.seedColor.withValues(alpha: _glowAnim.value),
+                    blurRadius: 30,
+                    spreadRadius: 4,
                   ),
                 ],
               ),

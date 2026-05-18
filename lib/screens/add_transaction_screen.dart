@@ -1,8 +1,5 @@
-// Add Transaction screen — dark theme with slide-up animation
-// UX: button below amount, expandable note for Bills/Shopping/Other, auto-nav home
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
@@ -23,7 +20,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-  final _categoryDescCtrl = TextEditingController(); // mini-note for detail categories
+  final _categoryDescCtrl = TextEditingController();
   final _db = SupabaseDbService();
   final _auth = AuthService();
 
@@ -32,12 +29,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
   DateTime _date = DateTime.now();
   bool _saving = false;
 
-  // Slide-up animation
   late AnimationController _animCtrl;
   late Animation<Offset> _slideAnim;
   late Animation<double> _fadeAnim;
 
-  /// Categories that show the expandable mini-note input
   static const _detailCategories = {'Bills', 'Shopping', 'Other'};
 
   @override
@@ -48,10 +43,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _slideAnim =
-        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
-            .animate(CurvedAnimation(
-                parent: _animCtrl, curve: Curves.easeOut));
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
     _fadeAnim = Tween<double>(begin: 0, end: 1)
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
     _animCtrl.forward();
@@ -66,21 +59,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
     super.dispose();
   }
 
-  /// Whether current category should show the expandable detail input
   bool get _showDetailInput =>
       _category != null && _detailCategories.contains(_category!.name);
 
-  /// Hint text based on selected category
   String get _detailHint {
     switch (_category?.name) {
       case 'Bills':
-        return 'e.g. Electricity Bill, Water Bill, Internet...';
+        return 'e.g. Electricity, Water, Internet...';
       case 'Shopping':
-        return 'e.g. Groceries, Clothes, Electronics...';
+        return 'e.g. Groceries, Clothes...';
       case 'Other':
-        return 'e.g. Gym membership, Gift for friend...';
+        return 'e.g. Gym, Gift...';
       default:
-        return 'Describe this transaction...';
+        return 'Describe...';
     }
   }
 
@@ -94,27 +85,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
       initialDate: _date,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppTheme.neonBlue,
-            surface: AppTheme.bgCard,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (d != null) setState(() => _date = d);
   }
 
-  /// Save transaction then auto-navigate back to home
   Future<void> _save() async {
     if (!_formKey.currentState!.validate() || _category == null) return;
     setState(() => _saving = true);
 
-    // Build the final note:
-    // If a detail-category description was entered, use it as the primary note.
-    // If the user also wrote a general note, combine them.
     String? finalNote;
     final hasDesc = _categoryDescCtrl.text.trim().isNotEmpty;
     final hasNote = _noteCtrl.text.trim().isNotEmpty;
@@ -142,386 +120,238 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
       ));
 
       if (mounted) {
-        // Show success feedback
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.check_circle_rounded,
-                color: AppTheme.neonGreen, size: 20),
-            const SizedBox(width: 10),
-            Text('Transaction added!',
-                style: GoogleFonts.poppins(color: Colors.white)),
-          ]),
-          backgroundColor: AppTheme.bgCard,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(milliseconds: 1200),
-        ));
-
-        // Notify parent to refresh data, then navigate back to home
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20),
+              const SizedBox(width: 10),
+              Text('Transaction added!', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white)),
+            ]),
+            backgroundColor: Theme.of(context).cardTheme.color,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
         widget.onTransactionAdded?.call();
-
-        // Small delay so user sees the snackbar, then auto-navigate home
-        await Future.delayed(const Duration(milliseconds: 400));
+        await Future.delayed(const Duration(milliseconds: 300));
         if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         final errorMsg = e.toString().replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(errorMsg, style: GoogleFonts.poppins(color: Colors.white)),
-          backgroundColor: AppTheme.neonRed,
+          content: Text(errorMsg, style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppTheme.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 3),
         ));
       }
     } finally {
-      if (mounted) {
-        setState(() => _saving = false);
-      }
+      if (mounted) setState(() => _saving = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: Text('Add Transaction',
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-        backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded,
-              color: AppTheme.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: const Text('Add Transaction'),
       ),
       body: FadeTransition(
         opacity: _fadeAnim,
         child: SlideTransition(
           position: _slideAnim,
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+            padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Type toggle ─────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.bgCard,
-                      borderRadius: BorderRadius.circular(AppTheme.r12),
-                      border: Border.all(
-                        color: AppTheme.textMuted.withValues(alpha: 0.12),
+                  Center(
+                    child: SegmentedButton<TransactionType>(
+                      segments: const [
+                        ButtonSegment(
+                          value: TransactionType.expense,
+                          label: Text('Expense'),
+                          icon: Icon(Icons.arrow_upward_rounded),
+                        ),
+                        ButtonSegment(
+                          value: TransactionType.income,
+                          label: Text('Income'),
+                          icon: Icon(Icons.arrow_downward_rounded),
+                        ),
+                      ],
+                      selected: {_type},
+                      onSelectionChanged: (Set<TransactionType> newSelection) {
+                        setState(() {
+                          _type = newSelection.first;
+                          _category = _categories.first;
+                          _categoryDescCtrl.clear();
+                        });
+                      },
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                          (states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return _type == TransactionType.income
+                                  ? AppTheme.success.withValues(alpha: 0.2)
+                                  : AppTheme.error.withValues(alpha: 0.2);
+                            }
+                            return null;
+                          },
+                        ),
+                        foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+                          (states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return _type == TransactionType.income ? AppTheme.success : AppTheme.error;
+                            }
+                            return Theme.of(context).colorScheme.onSurface;
+                          },
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        _toggle('Expense', Icons.arrow_upward_rounded,
-                            _type == TransactionType.expense,
-                            AppTheme.neonRed, () {
-                          setState(() {
-                            _type = TransactionType.expense;
-                            _category =
-                                AppCategories.expenseCategories.first;
-                            _categoryDescCtrl.clear();
-                          });
-                        }),
-                        _toggle('Income', Icons.arrow_downward_rounded,
-                            _type == TransactionType.income,
-                            AppTheme.neonGreen, () {
-                          setState(() {
-                            _type = TransactionType.income;
-                            _category =
-                                AppCategories.incomeCategories.first;
-                            _categoryDescCtrl.clear();
-                          });
-                        }),
-                      ],
-                    ),
                   ),
-                  const SizedBox(height: 28),
-
-                  // ── Amount ──────────────────────────────────
-                  _label('Amount'),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 32),
+                  Text('Amount', style: Theme.of(context).textTheme.labelMedium),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: _amountCtrl,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}')),
-                    ],
-                    style: GoogleFonts.poppins(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    ),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          color: _type == TransactionType.income ? AppTheme.success : AppTheme.error,
+                        ),
                     decoration: InputDecoration(
                       hintText: '0.00',
-                      hintStyle: GoogleFonts.poppins(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textMuted.withValues(alpha: 0.3),
-                      ),
                       prefixIcon: Padding(
                         padding: const EdgeInsets.only(left: 20, right: 8),
                         child: Text('₹',
-                            style: GoogleFonts.poppins(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.neonBlue)),
+                            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                )),
                       ),
-                      prefixIconConstraints:
-                          const BoxConstraints(minWidth: 0, minHeight: 0),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Enter amount';
-                      if (double.tryParse(v) == null ||
-                          double.parse(v) <= 0) {
-                        return 'Enter a valid amount';
-                      }
+                      if (double.tryParse(v) == null || double.parse(v) <= 0) return 'Enter valid amount';
                       return null;
                     },
                   ),
-                  const SizedBox(height: 20),
-
-                  // ── Add Transaction button (below amount) ───
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _saving ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.r16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Ink(
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.r16),
-                          boxShadow: AppTheme.neonGlow(
-                              AppTheme.neonBlue,
-                              blur: 16),
-                        ),
-                        child: Center(
-                          child: _saving
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white))
-                              : Text('Add Transaction',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white)),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // ── Category ────────────────────────────────
-                  _label('Category'),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 24),
+                  Text('Category', style: Theme.of(context).textTheme.labelMedium),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+                    spacing: 12,
+                    runSpacing: 12,
                     children: _categories.map((c) {
-                      final sel = _category?.name == c.name;
+                      final isSelected = _category == c;
                       return GestureDetector(
-                        onTap: () {
-                          setState(() => _category = c);
-                          // Clear detail desc when switching to a non-detail category
-                          if (!_detailCategories.contains(c.name)) {
-                            _categoryDescCtrl.clear();
-                          }
-                        },
+                        onTap: () => setState(() {
+                          _category = c;
+                          _categoryDescCtrl.clear();
+                        }),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: sel
-                                ? c.color.withValues(alpha: 0.15)
-                                : AppTheme.bgCard,
-                            borderRadius: BorderRadius.circular(12),
+                            color: isSelected ? c.color.withValues(alpha: 0.2) : Theme.of(context).cardTheme.color,
+                            borderRadius: BorderRadius.circular(AppTheme.r16),
                             border: Border.all(
-                              color: sel
-                                  ? c.color
-                                  : AppTheme.textMuted
-                                      .withValues(alpha: 0.12),
-                              width: sel ? 1.5 : 1,
+                              color: isSelected ? c.color : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                              width: isSelected ? 2 : 1,
                             ),
-                            boxShadow: sel
-                                ? [
-                                    BoxShadow(
-                                      color:
-                                          c.color.withValues(alpha: 0.15),
-                                      blurRadius: 12,
-                                    )
-                                  ]
-                                : null,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(c.icon,
-                                  size: 16,
-                                  color: sel
-                                      ? c.color
-                                      : AppTheme.textMuted),
-                              const SizedBox(width: 6),
+                              Icon(c.icon, color: isSelected ? c.color : Theme.of(context).colorScheme.onSurface, size: 20),
+                              const SizedBox(width: 8),
                               Text(c.name,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight:
-                                        sel ? FontWeight.w600 : FontWeight.w400,
-                                    color: sel
-                                        ? c.color
-                                        : AppTheme.textSecondary,
-                                  )),
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: isSelected ? c.color : Theme.of(context).colorScheme.onSurface,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      )),
                             ],
                           ),
                         ),
                       );
                     }).toList(),
                   ),
-
-                  // ── Expandable detail input (Bills/Shopping/Other) ──
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    child: _showDetailInput
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 14),
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppTheme.bgCard,
-                                borderRadius:
-                                    BorderRadius.circular(AppTheme.r12),
-                                border: Border.all(
-                                  color: (_category?.color ?? AppTheme.neonPurple)
-                                      .withValues(alpha: 0.2),
+                  if (_showDetailInput) ...[
+                    const SizedBox(height: 24),
+                    Text('Detail', style: Theme.of(context).textTheme.labelMedium),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _categoryDescCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        hintText: _detailHint,
+                        prefixIcon: const Icon(Icons.short_text_rounded),
+                      ),
+                      validator: (v) => v == null || v.isEmpty ? 'Required for this category' : null,
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Date', style: Theme.of(context).textTheme.labelMedium),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: _pickDate,
+                              borderRadius: BorderRadius.circular(AppTheme.r16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).cardTheme.color,
+                                  borderRadius: BorderRadius.circular(AppTheme.r16),
+                                  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (_category?.color ?? AppTheme.neonPurple)
-                                        .withValues(alpha: 0.06),
-                                    blurRadius: 12,
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.edit_note_rounded,
-                                          color: (_category?.color ?? AppTheme.neonPurple)
-                                              .withValues(alpha: 0.8),
-                                          size: 18),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'What is this for?',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: _category?.color ?? AppTheme.neonPurple,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextFormField(
-                                    controller: _categoryDescCtrl,
-                                    maxLines: 2,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: AppTheme.textPrimary,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.calendar_today_rounded, size: 20, color: Theme.of(context).colorScheme.primary),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      DateFormat('MMM dd, yyyy').format(_date),
+                                      style: Theme.of(context).textTheme.bodyMedium,
                                     ),
-                                    decoration: InputDecoration(
-                                      hintText: _detailHint,
-                                      hintStyle: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: AppTheme.textMuted
-                                            .withValues(alpha: 0.5),
-                                      ),
-                                      filled: true,
-                                      fillColor: AppTheme.bgCardLight,
-                                      contentPadding:
-                                          const EdgeInsets.all(14),
-                                      border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Date ────────────────────────────────────
-                  _label('Date'),
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: _pickDate,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.bgCardLight,
-                        borderRadius: BorderRadius.circular(AppTheme.r12),
-                        border: Border.all(
-                          color: AppTheme.textMuted.withValues(alpha: 0.15),
+                          ],
                         ),
                       ),
-                      child: Row(children: [
-                        const Icon(Icons.calendar_today_rounded,
-                            color: AppTheme.neonBlue, size: 18),
-                        const SizedBox(width: 12),
-                        Text(
-                          DateFormat('EEEE, MMM dd, yyyy').format(_date),
-                          style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppTheme.textPrimary),
-                        ),
-                      ]),
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 24),
-
-                  // ── Note (kept as-is) ───────────────────────
-                  _label('Note (optional)'),
-                  const SizedBox(height: 10),
+                  Text('Optional Note', style: Theme.of(context).textTheme.labelMedium),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: _noteCtrl,
-                    maxLines: 3,
-                    style: GoogleFonts.poppins(
-                        fontSize: 14, color: AppTheme.textPrimary),
+                    textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
-                        hintText: 'Write a note...'),
+                      hintText: 'Add a note...',
+                      prefixIcon: Icon(Icons.notes_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: FilledButton(
+                      onPressed: _saving ? null : _save,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _type == TransactionType.income ? AppTheme.success : AppTheme.error,
+                      ),
+                      child: _saving
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                          : const Text('Save Transaction', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
                   ),
                   const SizedBox(height: 40),
                 ],
@@ -532,43 +362,4 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
       ),
     );
   }
-
-  Widget _toggle(String label, IconData icon, bool sel, Color color,
-      VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: sel ? color.withValues(alpha: 0.12) : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon,
-                  size: 16,
-                  color: sel ? color : AppTheme.textMuted),
-              const SizedBox(width: 6),
-              Text(label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight:
-                        sel ? FontWeight.w600 : FontWeight.w400,
-                    color: sel ? color : AppTheme.textMuted,
-                  )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _label(String t) => Text(t,
-      style: GoogleFonts.poppins(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: AppTheme.textSecondary));
 }

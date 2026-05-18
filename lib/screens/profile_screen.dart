@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../services/auth_service.dart';
@@ -18,8 +17,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
-    with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   final _auth = AuthService();
   final _settings = SettingsService();
 
@@ -127,33 +125,17 @@ class _ProfileScreenState extends State<ProfileScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.r16)),
-        title: Text('Logout',
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary)),
-        content: Text('Are you sure you want to logout?',
-            style: GoogleFonts.poppins(
-                fontSize: 14, color: AppTheme.textSecondary)),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(color: AppTheme.textMuted)),
+            child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.neonRed,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: Text('Logout',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            child: const Text('Logout'),
           ),
         ],
       ),
@@ -174,22 +156,15 @@ class _ProfileScreenState extends State<ProfileScreen>
           padding: const EdgeInsets.only(bottom: 100),
           child: Column(
             children: [
-              // ── Gradient Header with Profile ────────────────
               _buildProfileHeader(),
-
-              // ── Functional Tools (Export & Calendar) ────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
                 child: _buildFunctionalOptions(),
               ),
-
-              // ── App Settings (Dark Mode & Version) ──────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
                 child: _buildPreferencesSection(),
               ),
-
-              // ── Logout Button ───────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
                 child: _buildLogoutButton(),
@@ -201,9 +176,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ── PROFILE HEADER ────────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════
   Widget _buildProfileHeader() {
     return Container(
       width: double.infinity,
@@ -226,18 +198,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       child: Column(
         children: [
-          // ── Title ──
           Text(
             'My Profile',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 24),
-
-          // ── Avatar ──
           Container(
             width: 88,
             height: 88,
@@ -266,19 +231,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
-
-          // ── Name ──
           Text(
             _userName,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 4),
-
-          // ── Email ──
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
@@ -287,34 +244,20 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             child: Text(
               _userEmail,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(height: 16),
-
-          // ── Tagline ──
           Text(
             'Track smart. Spend wise. Save more.',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              fontStyle: FontStyle.italic,
-              color: Colors.white.withValues(alpha: 0.7),
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: Colors.white70),
           ),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ── FUNCTIONAL TOOLS ──────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════
   Widget _buildFunctionalOptions() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,19 +341,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 14),
               Text(
                 label,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: AppTheme.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelSmall,
               ),
             ],
           ),
@@ -419,9 +355,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ── PREFERENCES SECTION (DARK MODE & VERSION) ─────────────
-  // ═══════════════════════════════════════════════════════════
   Widget _buildPreferencesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,35 +363,33 @@ class _ProfileScreenState extends State<ProfileScreen>
         const SizedBox(height: 14),
         Container(
           decoration: BoxDecoration(
-            color: AppTheme.bgCard,
+            color: Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(AppTheme.r16),
-            border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: Column(
             children: [
               _tile(
                 icon: Icons.dark_mode_rounded,
-                color: AppTheme.neonPurple,
+                color: Colors.purpleAccent,
                 title: 'Dark Mode',
                 subtitle: _darkMode ? 'Enabled' : 'Disabled',
-                trailing: Switch.adaptive(
+                trailing: Switch(
                   value: _darkMode,
                   onChanged: (v) async {
                     setState(() => _darkMode = v);
                     await _settings.setThemeMode(v);
                     themeNotifier.value = v ? ThemeMode.dark : ThemeMode.light;
                   },
-                  activeTrackColor: AppTheme.neonPurple,
-                  inactiveTrackColor: AppTheme.textMuted.withValues(alpha: 0.2),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Divider(height: 1, color: AppTheme.textMuted.withValues(alpha: 0.1)),
+                child: Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
               ),
               _tile(
                 icon: Icons.info_outline_rounded,
-                color: AppTheme.neonBlue,
+                color: Theme.of(context).colorScheme.primary,
                 title: 'App Version',
                 subtitle: _appVersion,
                 trailing: const SizedBox.shrink(),
@@ -498,15 +429,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary)),
+                Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 1),
-                Text(subtitle,
-                    style: GoogleFonts.poppins(
-                        fontSize: 11, color: AppTheme.textMuted)),
+                Text(subtitle, style: Theme.of(context).textTheme.labelSmall),
               ],
             ),
           ),
@@ -516,49 +441,30 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ── LOGOUT BUTTON ─────────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════
   Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
       height: 54,
-      child: ElevatedButton.icon(
+      child: OutlinedButton.icon(
         onPressed: _logout,
         icon: const Icon(Icons.logout_rounded, size: 20),
-        label: Text('Logout',
-            style:
-                GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.neonRed.withValues(alpha: 0.1),
-          foregroundColor: AppTheme.neonRed,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.r16),
-            side: BorderSide(
-              color: AppTheme.neonRed.withValues(alpha: 0.2),
-            ),
-          ),
+        label: const Text('Logout', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.error,
+          side: const BorderSide(color: AppTheme.error),
         ),
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ── SHARED HELPERS ────────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════
   Widget _sectionHeader(String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: AppTheme.neonBlue, size: 18),
+        Icon(icon, color: Theme.of(context).colorScheme.primary, size: 18),
         const SizedBox(width: 8),
         Text(
           title,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
-          ),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );

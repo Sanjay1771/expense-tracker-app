@@ -1,8 +1,5 @@
-// Analytics screen with line chart, bar chart, and pie chart
-// Uses fl_chart for all visualizations with smooth animations
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
@@ -30,7 +27,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
   final _settings = SettingsService();
   Map<String, double> _catBudgets = {};
   String _insightText = "Checking your spending habits...";
-  Color _insightColor = AppTheme.neonBlue;
+  Color _insightColor = AppTheme.seedColor;
 
   @override
   void initState() {
@@ -44,8 +41,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     final txns = await _db.getTransactions();
     final cats = await _db.getExpensesByCategory();
     final total = cats.values.fold(0.0, (s, v) => s + v);
-    
-    // Load category budgets
+
     final budgets = <String, double>{};
     for (final cat in cats.keys) {
       budgets[cat] = await _settings.getCategoryBudget(uid, cat);
@@ -67,9 +63,8 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
 
   void _computeInsights(List<TransactionModel> txns, Map<String, double> cats, Map<String, double> budgets, AIAnalysis ai) {
     _insightText = ai.insightMessage;
-    _insightColor = ai.isSpendingIncreasing ? AppTheme.neonPink : AppTheme.neonBlue;
+    _insightColor = ai.isSpendingIncreasing ? AppTheme.error : AppTheme.seedColor;
 
-    // Check category limits
     String? exceededCat;
     for (final entry in cats.entries) {
       final budget = budgets[entry.key] ?? 0;
@@ -81,7 +76,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
 
     if (exceededCat != null) {
       _insightText += "\nWarning: You exceeded your limit for $exceededCat!";
-      _insightColor = AppTheme.neonRed;
+      _insightColor = AppTheme.error;
     }
   }
 
@@ -89,26 +84,18 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.neonBlue))
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Analytics',
-                      style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary)),
+                  Text('Analytics', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('Track your spending trends',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13, color: AppTheme.textMuted)),
+                  Text('Track your spending trends', style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 24),
 
-                  // ── Smart Insights ──────────────────────────
                   if (_transactions.isNotEmpty) ...[
                     _buildInsightCard(),
                     const SizedBox(height: 24),
@@ -117,13 +104,12 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
                   if (_transactions.isEmpty)
                     _emptyState()
                   else ...[
-                    // ── Line Chart: Weekly Trend ─────────────
                     AnimatedListItem(
                       index: 0,
                       child: _chartCard(
                         title: 'Weekly Trend',
                         icon: Icons.show_chart_rounded,
-                        color: AppTheme.neonBlue,
+                        color: Theme.of(context).colorScheme.primary,
                         child: SizedBox(
                           height: 200,
                           child: LineChart(_lineChartData()),
@@ -132,13 +118,12 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Bar Chart: Category Comparison ───────
                     AnimatedListItem(
                       index: 1,
                       child: _chartCard(
                         title: 'Category Comparison',
                         icon: Icons.bar_chart_rounded,
-                        color: AppTheme.neonPurple,
+                        color: Colors.purpleAccent,
                         child: SizedBox(
                           height: 200,
                           child: BarChart(_barChartData()),
@@ -147,14 +132,13 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Pie Chart: Distribution ──────────────
                     if (_expByCategory.isNotEmpty)
                       AnimatedListItem(
                         index: 2,
                         child: _chartCard(
                           title: 'Expense Distribution',
                           icon: Icons.pie_chart_rounded,
-                          color: AppTheme.neonGreen,
+                          color: AppTheme.success,
                           child: Column(
                             children: [
                               SizedBox(
@@ -169,12 +153,11 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     const SizedBox(height: 20),
 
-                    // ── Category Limits ───────────────────────
                     if (_catBudgets.values.any((v) => v > 0)) ...[
                       _chartCard(
                         title: 'Category Spending Limits',
                         icon: Icons.speed_rounded,
-                        color: AppTheme.neonOrange,
+                        color: Colors.orangeAccent,
                         child: Column(
                           children: _categoryLimitList(),
                         ),
@@ -188,9 +171,6 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  CHART CARD WRAPPER
-  // ─────────────────────────────────────────────────────────────
   Widget _chartCard({
     required String title,
     required IconData icon,
@@ -201,17 +181,9 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(AppTheme.r20),
-        border: Border.all(
-            color: color.withValues(alpha: 0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,11 +198,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
               child: Icon(icon, color: color, size: 16),
             ),
             const SizedBox(width: 10),
-            Text(title,
-                style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
+            Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           ]),
           const SizedBox(height: 20),
           child,
@@ -239,14 +207,10 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  LINE CHART — Last 7 days spending
-  // ─────────────────────────────────────────────────────────────
   LineChartData _lineChartData() {
     final now = DateTime.now();
     final spots = <FlSpot>[];
 
-    // Compute daily totals for the last 7 days
     for (int i = 6; i >= 0; i--) {
       final day = DateTime(now.year, now.month, now.day - i);
       double total = 0;
@@ -267,7 +231,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
         drawVerticalLine: false,
         horizontalInterval: _maxY(spots) / 4,
         getDrawingHorizontalLine: (v) => FlLine(
-          color: AppTheme.textMuted.withValues(alpha: 0.08),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
           strokeWidth: 1,
         ),
       ),
@@ -281,18 +245,14 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
               return Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(DateFormat('E').format(d).substring(0, 2),
-                    style: GoogleFonts.poppins(
-                        fontSize: 10, color: AppTheme.textMuted)),
+                    style: Theme.of(context).textTheme.labelSmall),
               );
             },
           ),
         ),
-        leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
+        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
       borderData: FlBorderData(show: false),
       lineBarsData: [
@@ -300,17 +260,16 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
           spots: spots,
           isCurved: true,
           curveSmoothness: 0.3,
-          gradient: const LinearGradient(
-              colors: [AppTheme.neonBlue, AppTheme.neonPurple]),
+          gradient: const LinearGradient(colors: [Color(0xFF4F46E5), Colors.purpleAccent]),
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: FlDotData(
             show: true,
             getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
               radius: 4,
-              color: AppTheme.neonBlue,
+              color: Theme.of(context).colorScheme.primary,
               strokeWidth: 2,
-              strokeColor: AppTheme.bg,
+              strokeColor: Theme.of(context).colorScheme.surface,
             ),
           ),
           belowBarData: BarAreaData(
@@ -319,8 +278,8 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                AppTheme.neonBlue.withValues(alpha: 0.15),
-                AppTheme.neonBlue.withValues(alpha: 0.0),
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.0),
               ],
             ),
           ),
@@ -328,17 +287,12 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       ],
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (_) => AppTheme.bgCardLight,
-          // Removed deprecated tooltipRoundedRadius
-
+          getTooltipColor: (_) => Theme.of(context).colorScheme.surface,
           getTooltipItems: (touchedSpots) {
             return touchedSpots.map((s) {
               return LineTooltipItem(
                 '₹${s.y.toStringAsFixed(0)}',
-                GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.neonBlue),
+                TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               );
             }).toList();
           },
@@ -355,19 +309,16 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     return m;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  BAR CHART — Category comparison
-  // ─────────────────────────────────────────────────────────────
   BarChartData _barChartData() {
     final entries = _expByCategory.entries.toList();
     final neonColors = [
-      AppTheme.neonBlue,
-      AppTheme.neonPurple,
-      AppTheme.neonGreen,
-      AppTheme.neonOrange,
-      AppTheme.neonPink,
-      AppTheme.neonYellow,
-      AppTheme.neonRed,
+      Theme.of(context).colorScheme.primary,
+      Colors.purpleAccent,
+      AppTheme.success,
+      Colors.orangeAccent,
+      Colors.pinkAccent,
+      Colors.yellowAccent,
+      AppTheme.error,
     ];
 
     return BarChartData(
@@ -375,7 +326,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
         show: true,
         drawVerticalLine: false,
         getDrawingHorizontalLine: (v) => FlLine(
-          color: AppTheme.textMuted.withValues(alpha: 0.08),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
           strokeWidth: 1,
         ),
       ),
@@ -389,22 +340,16 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
               return Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  entries[i].key.length > 4
-                      ? entries[i].key.substring(0, 4)
-                      : entries[i].key,
-                  style: GoogleFonts.poppins(
-                      fontSize: 9, color: AppTheme.textMuted),
+                  entries[i].key.length > 4 ? entries[i].key.substring(0, 4) : entries[i].key,
+                  style: Theme.of(context).textTheme.labelSmall,
                 ),
               );
             },
           ),
         ),
-        leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
+        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
       borderData: FlBorderData(show: false),
       barGroups: entries.asMap().entries.map((e) {
@@ -424,7 +369,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
               backDrawRodData: BackgroundBarChartRodData(
                 show: true,
                 toY: _totalExp,
-                color: AppTheme.textMuted.withValues(alpha: 0.05),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               ),
             ),
           ],
@@ -432,17 +377,12 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       }).toList(),
       barTouchData: BarTouchData(
         touchTooltipData: BarTouchTooltipData(
-          getTooltipColor: (_) => AppTheme.bgCardLight,
-          // Removed deprecated tooltipRoundedRadius
-
+          getTooltipColor: (_) => Theme.of(context).colorScheme.surface,
           getTooltipItem: (group, gIdx, rod, rIdx) {
             final name = entries[group.x].key;
             return BarTooltipItem(
               '$name\n₹${rod.toY.toStringAsFixed(0)}',
-              GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary),
+              TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
             );
           },
         ),
@@ -450,18 +390,15 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  PIE CHART
-  // ─────────────────────────────────────────────────────────────
   PieChartData _pieChartData() {
     final neonColors = [
-      AppTheme.neonBlue,
-      AppTheme.neonPurple,
-      AppTheme.neonGreen,
-      AppTheme.neonOrange,
-      AppTheme.neonPink,
-      AppTheme.neonYellow,
-      AppTheme.neonRed,
+      Theme.of(context).colorScheme.primary,
+      Colors.purpleAccent,
+      AppTheme.success,
+      Colors.orangeAccent,
+      Colors.pinkAccent,
+      Colors.yellowAccent,
+      AppTheme.error,
     ];
     int idx = 0;
 
@@ -469,14 +406,11 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       pieTouchData: PieTouchData(
         touchCallback: (event, response) {
           setState(() {
-            if (!event.isInterestedForInteractions ||
-                response == null ||
-                response.touchedSection == null) {
+            if (!event.isInterestedForInteractions || response == null || response.touchedSection == null) {
               _touchedPie = -1;
               return;
             }
-            _touchedPie =
-                response.touchedSection!.touchedSectionIndex;
+            _touchedPie = response.touchedSection!.touchedSectionIndex;
           });
         },
       ),
@@ -492,11 +426,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
           value: e.value,
           title: '${pct.toStringAsFixed(0)}%',
           radius: touched ? 60 : 50,
-          titleStyle: GoogleFonts.poppins(
-            fontSize: touched ? 13 : 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
+          titleStyle: TextStyle(fontSize: touched ? 13 : 11, fontWeight: FontWeight.bold, color: Colors.white),
         );
       }).toList(),
     );
@@ -504,13 +434,13 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
 
   List<Widget> _legend() {
     final neonColors = [
-      AppTheme.neonBlue,
-      AppTheme.neonPurple,
-      AppTheme.neonGreen,
-      AppTheme.neonOrange,
-      AppTheme.neonPink,
-      AppTheme.neonYellow,
-      AppTheme.neonRed,
+      Theme.of(context).colorScheme.primary,
+      Colors.purpleAccent,
+      AppTheme.success,
+      Colors.orangeAccent,
+      Colors.pinkAccent,
+      Colors.yellowAccent,
+      AppTheme.error,
     ];
     int idx = 0;
     return _expByCategory.entries.map((e) {
@@ -522,19 +452,11 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
           Container(
             width: 12,
             height: 12,
-            decoration: BoxDecoration(
-                color: c, borderRadius: BorderRadius.circular(3)),
+            decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3)),
           ),
           const SizedBox(width: 8),
-          Expanded(
-              child: Text(e.key,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12, color: AppTheme.textSecondary))),
-          Text('₹${e.value.toStringAsFixed(0)}',
-              style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
+          Expanded(child: Text(e.key, style: Theme.of(context).textTheme.bodySmall)),
+          Text('₹${e.value.toStringAsFixed(0)}', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
         ]),
       );
     }).toList();
@@ -547,22 +469,15 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: AppTheme.neonPurple.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(Icons.bar_chart_rounded,
-                size: 36, color: AppTheme.neonPurple),
+            child: Icon(Icons.bar_chart_rounded, size: 36, color: Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(height: 16),
-          Text('No data yet',
-              style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
+          Text('No data yet', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
-          Text('Add transactions to see analytics',
-              style: GoogleFonts.poppins(
-                  fontSize: 13, color: AppTheme.textMuted)),
+          Text('Add transactions to see analytics', style: Theme.of(context).textTheme.bodyMedium),
         ]),
       );
 
@@ -582,11 +497,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
           Expanded(
             child: Text(
               _insightText,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -599,7 +510,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       final budget = _catBudgets[e.key]!;
       final spending = e.value;
       final progress = (spending / budget).clamp(0.0, 1.0);
-      final color = progress >= 1.0 ? AppTheme.neonRed : (progress >= 0.8 ? AppTheme.neonOrange : AppTheme.neonBlue);
+      final color = progress >= 1.0 ? AppTheme.error : (progress >= 0.8 ? Colors.orangeAccent : Theme.of(context).colorScheme.primary);
 
       return Padding(
         padding: const EdgeInsets.only(bottom: 16),
@@ -609,21 +520,10 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  e.key,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
+                Text(e.key, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
                 Text(
                   '₹${spending.toStringAsFixed(0)} / ₹${budget.toStringAsFixed(0)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold, color: color),
                 ),
               ],
             ),
@@ -632,7 +532,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: progress,
-                backgroundColor: AppTheme.bgCardLight,
+                backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                 color: color,
                 minHeight: 6,
               ),

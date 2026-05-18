@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../models/friend_model.dart';
@@ -61,28 +60,20 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: AppTheme.neonRed),
+            const Icon(Icons.warning_amber_rounded, color: AppTheme.error),
             const SizedBox(width: 10),
-            Text('Delete ${_friend.name}?',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+            Text('Delete ${_friend.name}?'),
           ],
         ),
-        content: Text(
-          'This will permanently delete ${_friend.name} and all related transactions. This action cannot be undone.',
-          style: GoogleFonts.poppins(fontSize: 14, color: AppTheme.textSecondary),
-        ),
+        content: Text('This will permanently delete ${_friend.name} and all related transactions. This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(color: AppTheme.textMuted)),
+            child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
               final ok = await _svc.deleteFriend(_friend.id);
@@ -91,15 +82,8 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                 if (mounted) Navigator.pop(context);
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.neonRed,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('Delete',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -110,37 +94,22 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete Transaction?',
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-        content: Text(
-          'Remove ₹${tx.amount.toStringAsFixed(0)} (${tx.type.toUpperCase()})?',
-          style: GoogleFonts.poppins(fontSize: 14, color: AppTheme.textSecondary),
-        ),
+        title: const Text('Delete Transaction?'),
+        content: Text('Remove ₹${tx.amount.toStringAsFixed(0)} (${tx.type.toUpperCase()})?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(color: AppTheme.textMuted)),
+            child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await _svc.deleteFriendTransaction(tx.id);
               _loadData();
               widget.onUpdate();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.neonRed,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('Delete',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -153,13 +122,9 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.bgCard,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            24, 20, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 28),
+        padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -167,40 +132,34 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.textMuted.withValues(alpha: 0.3),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 24),
-            Text('Edit Profile',
-                style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
+            Text('Edit Profile', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 24),
             TextField(
               controller: nameCtrl,
-              style: GoogleFonts.poppins(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 hintText: 'Friend Name',
-                prefixIcon: Icon(Icons.person_rounded, color: AppTheme.textMuted),
+                prefixIcon: Icon(Icons.person_rounded),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: phoneCtrl,
               keyboardType: TextInputType.phone,
-              style: GoogleFonts.poppins(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 hintText: 'Phone Number (Optional)',
-                prefixIcon: Icon(Icons.phone_rounded, color: AppTheme.textMuted),
+                prefixIcon: Icon(Icons.phone_rounded),
               ),
             ),
             const SizedBox(height: 28),
             SizedBox(
               width: double.infinity,
               height: 52,
-              child: ElevatedButton(
+              child: FilledButton(
                 onPressed: () async {
                   final name = nameCtrl.text.trim();
                   if (name.isEmpty) return;
@@ -209,20 +168,12 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                     phone: phoneCtrl.text.trim().isNotEmpty ? phoneCtrl.text.trim() : null,
                   );
                   await _svc.updateFriend(updated);
-                  if (mounted) Navigator.pop(sheetCtx);
+                  if (!sheetCtx.mounted) return;
+                  Navigator.pop(sheetCtx);
                   _loadData();
                   widget.onUpdate();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.neonBlue,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text('Save Changes',
-                    style: GoogleFonts.poppins(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                child: const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -238,14 +189,10 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.bgCard,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (sheetCtx) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-              24, 20, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 28),
+          padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -253,157 +200,83 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.textMuted.withValues(alpha: 0.3),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Add Transaction with ${_friend.name}',
-                  style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary)),
+              Text('Add Transaction with ${_friend.name}', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 24),
-
-              // Type Selector: Clean toggle buttons (Strictly Given / Received)
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgCardLight,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.15)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setSheetState(() => type = 'given'),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: type == 'given'
-                                ? AppTheme.neonOrange.withValues(alpha: 0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: type == 'given'
-                                  ? AppTheme.neonOrange.withValues(alpha: 0.5)
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.arrow_upward_rounded,
-                                  color: type == 'given'
-                                      ? AppTheme.neonOrange
-                                      : AppTheme.textMuted,
-                                  size: 18),
-                              const SizedBox(width: 8),
-                              Text('Given',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 15,
-                                      fontWeight: type == 'given'
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: type == 'given'
-                                          ? AppTheme.neonOrange
-                                          : AppTheme.textMuted)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setSheetState(() => type = 'received'),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: type == 'received'
-                                ? AppTheme.neonGreen.withValues(alpha: 0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: type == 'received'
-                                  ? AppTheme.neonGreen.withValues(alpha: 0.5)
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.arrow_downward_rounded,
-                                  color: type == 'received'
-                                      ? AppTheme.neonGreen
-                                      : AppTheme.textMuted,
-                                  size: 18),
-                              const SizedBox(width: 8),
-                              Text('Received',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 15,
-                                      fontWeight: type == 'received'
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: type == 'received'
-                                          ? AppTheme.neonGreen
-                                          : AppTheme.textMuted)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'given',
+                    label: Text('Given'),
+                    icon: Icon(Icons.arrow_upward_rounded),
+                  ),
+                  ButtonSegment(
+                    value: 'received',
+                    label: Text('Received'),
+                    icon: Icon(Icons.arrow_downward_rounded),
+                  ),
+                ],
+                selected: {type},
+                onSelectionChanged: (Set<String> newSelection) {
+                  setSheetState(() => type = newSelection.first);
+                },
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                    (states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return type == 'given' ? AppTheme.error.withValues(alpha: 0.2) : AppTheme.success.withValues(alpha: 0.2);
+                      }
+                      return null;
+                    },
+                  ),
+                  foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+                    (states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return type == 'given' ? AppTheme.error : AppTheme.success;
+                      }
+                      return Theme.of(context).colorScheme.onSurface;
+                    },
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // Amount Input (Strictly numbers, no +/- signs)
+              const SizedBox(height: 24),
               TextField(
                 controller: amountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                ],
-                style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: type == 'given' ? AppTheme.error : AppTheme.success,
+                    ),
                 decoration: InputDecoration(
                   hintText: '0.00',
                   prefixIcon: Padding(
                     padding: const EdgeInsets.only(left: 20, right: 12),
                     child: Text('₹',
-                        style: GoogleFonts.poppins(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: type == 'given' ? AppTheme.neonOrange : AppTheme.neonGreen)),
+                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
                   ),
                   prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                   contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Note Input
               TextField(
                 controller: noteCtrl,
-                style: GoogleFonts.poppins(fontSize: 14, color: AppTheme.textPrimary),
                 decoration: const InputDecoration(
                   hintText: 'Note (Optional)',
-                  prefixIcon: Icon(Icons.sticky_note_2_rounded, color: AppTheme.textMuted),
+                  prefixIcon: Icon(Icons.sticky_note_2_rounded),
                 ),
               ),
               const SizedBox(height: 28),
-
-              // Submit Button
               SizedBox(
                 width: double.infinity,
                 height: 52,
-                child: ElevatedButton(
+                child: FilledButton(
                   onPressed: () async {
                     final amount = double.tryParse(amountCtrl.text);
                     if (amount == null || amount <= 0) return;
@@ -415,18 +288,15 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                       note: noteCtrl.text.trim().isNotEmpty ? noteCtrl.text.trim() : null,
                     );
 
-                    if (mounted) Navigator.pop(sheetCtx);
+                    if (!sheetCtx.mounted) return;
+                    Navigator.pop(sheetCtx);
                     _loadData();
                     widget.onUpdate();
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: type == 'given' ? AppTheme.neonOrange : AppTheme.neonGreen,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: type == 'given' ? AppTheme.error : AppTheme.success,
                   ),
-                  child: Text('Add Transaction',
-                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: const Text('Add Transaction', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -439,38 +309,32 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: Text(_friend.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        backgroundColor: AppTheme.bg,
+        title: Text(_friend.name),
         actions: [
           IconButton(
             onPressed: _showEditProfileSheet,
-            icon: const Icon(Icons.edit_rounded, color: AppTheme.textSecondary),
+            icon: Icon(Icons.edit_rounded, color: Theme.of(context).colorScheme.primary),
           ),
           IconButton(
             onPressed: _confirmDeleteFriend,
-            icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.neonRed),
+            icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
           ),
           const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddTransactionSheet,
-        backgroundColor: AppTheme.neonBlue,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: Text('Add Transaction',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+        label: const Text('Add Transaction', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.neonBlue))
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              color: AppTheme.neonBlue,
-              backgroundColor: AppTheme.bgCard,
               child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics()),
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 slivers: [
                   SliverToBoxAdapter(
                     child: Padding(
@@ -482,11 +346,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                           const SizedBox(height: 20),
                           _buildSummaryCard(),
                           const SizedBox(height: 28),
-                          Text('Transaction History',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textPrimary)),
+                          Text('Transaction History', style: Theme.of(context).textTheme.titleLarge),
                           const SizedBox(height: 16),
                         ],
                       ),
@@ -503,22 +363,15 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                               width: 72,
                               height: 72,
                               decoration: BoxDecoration(
-                                color: AppTheme.neonBlue.withValues(alpha: 0.1),
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(24),
                               ),
-                              child: const Icon(Icons.receipt_long_rounded,
-                                  size: 36, color: AppTheme.neonBlue),
+                              child: Icon(Icons.receipt_long_rounded, size: 36, color: Theme.of(context).colorScheme.primary),
                             ),
                             const SizedBox(height: 16),
-                            Text('No transactions yet',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textPrimary)),
+                            Text('No transactions yet', style: Theme.of(context).textTheme.titleLarge),
                             const SizedBox(height: 6),
-                            Text('Tap + Add Transaction to begin tracking',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 13, color: AppTheme.textMuted)),
+                            Text('Tap + Add Transaction to begin tracking', style: Theme.of(context).textTheme.bodyMedium),
                             const SizedBox(height: 60),
                           ],
                         ),
@@ -545,9 +398,8 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.15)),
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(AppTheme.r20),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Row(
@@ -557,8 +409,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
             backgroundColor: _friend.avatarColor.withValues(alpha: 0.2),
             child: Text(
               _friend.initial,
-              style: GoogleFonts.poppins(
-                  fontSize: 26, fontWeight: FontWeight.w700, color: _friend.avatarColor),
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _friend.avatarColor),
             ),
           ),
           const SizedBox(width: 20),
@@ -566,20 +417,14 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_friend.name,
-                    style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary)),
+                Text(_friend.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                 if (_friend.phone != null && _friend.phone!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.phone_rounded, size: 14, color: AppTheme.textSecondary),
+                      Icon(Icons.phone_rounded, size: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                       const SizedBox(width: 6),
-                      Text(_friend.phone!,
-                          style: GoogleFonts.poppins(
-                              fontSize: 14, color: AppTheme.textSecondary)),
+                      Text(_friend.phone!, style: Theme.of(context).textTheme.bodyMedium),
                     ],
                   ),
                 ],
@@ -592,7 +437,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   }
 
   Widget _buildSummaryCard() {
-    final statusColor = _summary.balance == 0 ? AppTheme.neonGreen : AppTheme.neonOrange;
+    final statusColor = _summary.balance == 0 ? AppTheme.success : AppTheme.error;
     String statusText;
     if (_summary.balance > 0) {
       statusText = "${_friend.name} owes you ₹${_summary.balance.toStringAsFixed(0)}";
@@ -603,12 +448,12 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(20),
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(AppTheme.r24),
         border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-        boxShadow: AppTheme.neonGlow(statusColor, blur: 15),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -631,22 +476,17 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                       size: 16,
                     ),
                     const SizedBox(width: 6),
-                    Text(_summary.status,
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, fontWeight: FontWeight.w700, color: statusColor)),
+                    Text(_summary.status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: statusColor)),
                   ],
                 ),
               ),
-              Text('${_summary.transactionCount} transactions',
-                  style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textMuted)),
+              Text('${_summary.transactionCount} transactions', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70)),
             ],
           ),
           const SizedBox(height: 20),
-          Text(statusText,
-              style: GoogleFonts.poppins(
-                  fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          Text(statusText, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
           const SizedBox(height: 20),
-          Divider(color: AppTheme.textMuted.withValues(alpha: 0.15), height: 1),
+          Divider(color: Colors.white24, height: 1),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -654,27 +494,21 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Given',
-                        style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text('Total Given', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white70)),
                     const SizedBox(height: 4),
-                    Text('₹${_summary.totalGiven.toStringAsFixed(0)}',
-                        style: GoogleFonts.poppins(
-                            fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.neonOrange)),
+                    Text('₹${_summary.totalGiven.toStringAsFixed(0)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
                   ],
                 ),
               ),
-              Container(width: 1, height: 30, color: AppTheme.textMuted.withValues(alpha: 0.2)),
+              Container(width: 1, height: 30, color: Colors.white24),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Received',
-                        style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text('Total Received', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white70)),
                     const SizedBox(height: 4),
-                    Text('₹${_summary.totalReceived.toStringAsFixed(0)}',
-                        style: GoogleFonts.poppins(
-                            fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.neonGreen)),
+                    Text('₹${_summary.totalReceived.toStringAsFixed(0)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
                   ],
                 ),
               ),
@@ -687,16 +521,16 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
 
   Widget _buildTransactionCard(FriendTransactionModel tx) {
     final isGiven = tx.isGiven;
-    final color = isGiven ? AppTheme.neonOrange : AppTheme.neonGreen;
+    final color = isGiven ? AppTheme.error : AppTheme.success;
     final actionText = isGiven ? 'Given' : 'Received';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.15)),
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(AppTheme.r16),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Row(
         children: [
@@ -718,30 +552,25 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(actionText,
-                    style: GoogleFonts.poppins(
-                        fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                Text(actionText, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 if (tx.note != null && tx.note!.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text(tx.note!,
-                      style: GoogleFonts.poppins(fontSize: 13, color: AppTheme.textSecondary)),
+                  Text(tx.note!, style: Theme.of(context).textTheme.bodySmall),
                 ],
                 const SizedBox(height: 4),
-                Text(DateFormat('MMM dd, yyyy • hh:mm a').format(tx.createdAt),
-                    style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textMuted)),
+                Text(DateFormat('MMM dd, yyyy • hh:mm a').format(tx.createdAt), style: Theme.of(context).textTheme.labelSmall),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('₹${tx.amount.toStringAsFixed(0)}',
-                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: color)),
+              Text('₹${tx.amount.toStringAsFixed(0)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: color)),
               const SizedBox(height: 4),
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.textMuted),
+                icon: Icon(Icons.delete_outline_rounded, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                 onPressed: () => _confirmDeleteTx(tx),
               ),
             ],

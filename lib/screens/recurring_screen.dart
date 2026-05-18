@@ -428,7 +428,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
       itemCount: _items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final item = _items[index];
         final cat = AppCategories.findByName(item.category);

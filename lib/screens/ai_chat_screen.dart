@@ -144,7 +144,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
               ),
               boxShadow: [
                 if (!isUser) 
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))
               ],
             ),
             child: Text(
@@ -166,7 +166,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       decoration: BoxDecoration(
         color: AppTheme.bgCard,
-        border: Border(top: BorderSide(color: AppTheme.textMuted.withOpacity(0.1))),
+        border: Border(top: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.1))),
       ),
       child: Row(
         children: [

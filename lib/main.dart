@@ -68,7 +68,7 @@ class ExpenseTrackerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
-      builder: (_, mode, __) {
+      builder: (context, mode, child) {
         return MaterialApp(
           title: 'Expense Tracker',
           debugShowCheckedModeBanner: false,
@@ -148,7 +148,7 @@ class _AuthGateState extends State<AuthGate> {
               decoration: BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.circular(22),
-                boxShadow: AppTheme.neonGlow(AppTheme.neonBlue),
+                boxShadow: [BoxShadow(color: AppTheme.seedColor.withValues(alpha: 0.4), blurRadius: 16)],
               ),
               child: const Icon(Icons.account_balance_wallet_rounded,
                   color: Colors.white, size: 40),
@@ -260,63 +260,32 @@ class _MainNavigationState extends State<MainNavigation> {
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
-      // Bottom nav (synced with PageView)
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.bgCard,
-          border: Border(
-            top: BorderSide(
-                color: AppTheme.textMuted.withValues(alpha: 0.08)),
+      // MD3 NavigationBar
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _idx,
+        onDestinationSelected: _goToPage,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
           ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _navItem(0, Icons.home_rounded, 'Home'),
-                _navItem(1, Icons.group_rounded, 'Friends'),
-                _navItem(2, Icons.bar_chart_rounded, 'Analytics'),
-                _navItem(3, Icons.person_rounded, 'Profile'),
-              ],
-            ),
+          NavigationDestination(
+            icon: Icon(Icons.group_outlined),
+            selectedIcon: Icon(Icons.group_rounded),
+            label: 'Friends',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(int i, IconData icon, String label) {
-    final sel = _idx == i;
-    return GestureDetector(
-      onTap: () => _goToPage(i),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: sel
-              ? AppTheme.neonBlue.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 22,
-                color: sel ? AppTheme.neonBlue : AppTheme.textMuted),
-            const SizedBox(height: 4),
-            Text(label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
-                  color: sel ? AppTheme.neonBlue : AppTheme.textMuted,
-                )),
-          ],
-        ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart_rounded),
+            label: 'Analytics',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }

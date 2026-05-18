@@ -164,8 +164,11 @@ class AIService {
     for (final t in transactions) {
       if (t.type == TransactionType.expense) {
         totalExp += t.amount;
-        if (t.date.isAfter(sevenDaysAgo)) currentWeek += t.amount;
-        else if (t.date.isAfter(fourteenDaysAgo)) lastWeek += t.amount;
+        if (t.date.isAfter(sevenDaysAgo)) {
+          currentWeek += t.amount;
+        } else if (t.date.isAfter(fourteenDaysAgo)) {
+          lastWeek += t.amount;
+        }
       }
     }
 

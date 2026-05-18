@@ -80,12 +80,18 @@ class HomeScreenState extends State<HomeScreen> {
     double weeklyInc = 0, weeklyExp = 0, monthlyInc = 0, monthlyExp = 0;
     for (var t in txns) {
       if (t.date.isAfter(sevenDaysAgo)) {
-        if (t.type == TransactionType.income) weeklyInc += t.amount;
-        else weeklyExp += t.amount;
+        if (t.type == TransactionType.income) {
+          weeklyInc += t.amount;
+        } else {
+          weeklyExp += t.amount;
+        }
       }
       if (t.date.month == now.month && t.date.year == now.year) {
-        if (t.type == TransactionType.income) monthlyInc += t.amount;
-        else monthlyExp += t.amount;
+        if (t.type == TransactionType.income) {
+          monthlyInc += t.amount;
+        } else {
+          monthlyExp += t.amount;
+        }
       }
     }
 
@@ -184,19 +190,12 @@ class HomeScreenState extends State<HomeScreen> {
                               children: [
                                 Text(
                                   'Good ${_greeting()} 👋',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    color: AppTheme.textSecondary,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   'Expense Tracker',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.textPrimary,
-                                  ),
+                                  style: Theme.of(context).textTheme.headlineMedium,
                                 ),
                               ],
                             ),
@@ -252,7 +251,7 @@ class HomeScreenState extends State<HomeScreen> {
                             _actionButton(
                               icon: Icons.arrow_downward_rounded,
                               label: 'Deposit',
-                              color: AppTheme.neonGreen,
+                              color: AppTheme.success,
                               isActive: _currentFilter == TransactionType.income,
                               onTap: () => _toggleFilter(TransactionType.income),
                             ),
@@ -260,7 +259,7 @@ class HomeScreenState extends State<HomeScreen> {
                             _actionButton(
                               icon: Icons.arrow_upward_rounded,
                               label: 'Withdraw',
-                              color: AppTheme.neonRed,
+                              color: AppTheme.error,
                               isActive: _currentFilter == TransactionType.expense,
                               onTap: () => _toggleFilter(TransactionType.expense),
                             ),
@@ -291,11 +290,7 @@ class HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               'Recent Transactions',
-                              style: GoogleFonts.poppins(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimary,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge,
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -307,11 +302,10 @@ class HomeScreenState extends State<HomeScreen> {
                               ),
                               child: Text(
                                 '${displayedTransactions.length}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.neonBlue,
-                                ),
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                             ),
                           ],
@@ -601,7 +595,7 @@ class HomeScreenState extends State<HomeScreen> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: _reminders.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final reminder = _reminders[index];
               final isOverdue = reminder.date.isBefore(DateTime.now());
@@ -809,7 +803,7 @@ class HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             _insightRow(
               icon: Icons.lightbulb_outline_rounded,
-              color: AppTheme.neonYellow,
+              color: Colors.yellowAccent,
               text: _aiAnalysis!.smartSuggestion,
               isSuggestion: true,
             ),

@@ -43,29 +43,29 @@ class _RecurringScreenState extends State<RecurringScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
+        backgroundColor: Theme.of(context).cardTheme.color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Delete Recurring Transaction?',
           style: GoogleFonts.poppins(
-            color: AppTheme.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
         ),
         content: Text(
           'This will stop the transaction from being auto-added in the future.',
-          style: GoogleFonts.poppins(color: AppTheme.textSecondary, fontSize: 13),
+          style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: AppTheme.textMuted)),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.neonRed,
+              backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
@@ -93,23 +93,23 @@ class _RecurringScreenState extends State<RecurringScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            backgroundColor: AppTheme.bgCard,
+            backgroundColor: Theme.of(context).cardTheme.color,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.neonPurple.withValues(alpha: 0.12),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.repeat_rounded, color: AppTheme.neonPurple, size: 18),
+                  child: Icon(Icons.repeat_rounded, color: Theme.of(context).colorScheme.primary, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Add Recurring',
                   style: GoogleFonts.poppins(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 17,
                   ),
@@ -123,13 +123,13 @@ class _RecurringScreenState extends State<RecurringScreen> {
                   // Title field
                   TextField(
                     controller: titleCtrl,
-                    style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontSize: 14),
+                    style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'Title (e.g. Rent, Netflix)',
-                      hintStyle: GoogleFonts.poppins(color: AppTheme.textMuted, fontSize: 13),
-                      prefixIcon: const Icon(Icons.title_rounded, color: AppTheme.textMuted, size: 20),
+                      hintStyle: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
+                      prefixIcon: Icon(Icons.title_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), size: 20),
                       filled: true,
-                      fillColor: AppTheme.bgCardLight,
+                      fillColor: Theme.of(context).cardTheme.color?.withValues(alpha: 0.5),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -142,13 +142,13 @@ class _RecurringScreenState extends State<RecurringScreen> {
                   TextField(
                     controller: amountCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontSize: 14),
+                    style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'Amount (₹)',
-                      hintStyle: GoogleFonts.poppins(color: AppTheme.textMuted, fontSize: 13),
-                      prefixIcon: const Icon(Icons.currency_rupee_rounded, color: AppTheme.textMuted, size: 20),
+                      hintStyle: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
+                      prefixIcon: Icon(Icons.currency_rupee_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), size: 20),
                       filled: true,
-                      fillColor: AppTheme.bgCardLight,
+                      fillColor: Theme.of(context).cardTheme.color?.withValues(alpha: 0.5),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -161,16 +161,16 @@ class _RecurringScreenState extends State<RecurringScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: AppTheme.bgCardLight,
+                      color: Theme.of(context).cardTheme.color?.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedCategory,
                         isExpanded: true,
-                        dropdownColor: AppTheme.bgCard,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textMuted),
-                        style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontSize: 14),
+                        dropdownColor: Theme.of(context).cardTheme.color,
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                        style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                         items: AppCategories.expenseCategories
                             .map((cat) => DropdownMenuItem(
                                   value: cat.name,
@@ -195,16 +195,16 @@ class _RecurringScreenState extends State<RecurringScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: AppTheme.bgCardLight,
+                      color: Theme.of(context).cardTheme.color?.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<RecurringFrequency>(
                         value: selectedFrequency,
                         isExpanded: true,
-                        dropdownColor: AppTheme.bgCard,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textMuted),
-                        style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontSize: 14),
+                        dropdownColor: Theme.of(context).cardTheme.color,
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                        style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                         items: RecurringFrequency.values
                             .map((f) => DropdownMenuItem(
                                   value: f,
@@ -216,7 +216,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
                                             : f == RecurringFrequency.weekly
                                                 ? Icons.view_week_rounded
                                                 : Icons.calendar_month_rounded,
-                                        color: AppTheme.neonBlue,
+                                        color: Theme.of(context).colorScheme.primary,
                                         size: 18,
                                       ),
                                       const SizedBox(width: 10),
@@ -249,16 +249,16 @@ class _RecurringScreenState extends State<RecurringScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                       decoration: BoxDecoration(
-                        color: AppTheme.bgCardLight,
+                        color: Theme.of(context).cardTheme.color?.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.calendar_today_rounded, color: AppTheme.textMuted, size: 20),
+                          Icon(Icons.calendar_today_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), size: 20),
                           const SizedBox(width: 10),
                           Text(
                             'Starts: ${DateFormat('MMM dd, yyyy').format(selectedStartDate)}',
-                            style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontSize: 14),
+                            style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                           ),
                         ],
                       ),
@@ -270,7 +270,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Cancel', style: GoogleFonts.poppins(color: AppTheme.textMuted)),
+                child: Text('Cancel', style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6))),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -296,7 +296,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
                   await _loadItems();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.neonPurple,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -335,18 +335,18 @@ class _RecurringScreenState extends State<RecurringScreen> {
   Color _frequencyColor(RecurringFrequency f) {
     switch (f) {
       case RecurringFrequency.daily:
-        return AppTheme.neonGreen;
+        return Theme.of(context).colorScheme.tertiary;
       case RecurringFrequency.weekly:
-        return AppTheme.neonBlue;
+        return Theme.of(context).colorScheme.primary;
       case RecurringFrequency.monthly:
-        return AppTheme.neonPurple;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -355,11 +355,11 @@ class _RecurringScreenState extends State<RecurringScreen> {
           child: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.bgCard,
+              color: Theme.of(context).cardTheme.color,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.15)),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6).withValues(alpha: 0.15)),
             ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textPrimary, size: 18),
+            child: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).colorScheme.onSurface, size: 18),
           ),
         ),
         title: Text(
@@ -367,19 +367,19 @@ class _RecurringScreenState extends State<RecurringScreen> {
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.neonPurple))
+          ? Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary))
           : _items.isEmpty
               ? _buildEmptyState()
               : _buildList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
-        backgroundColor: AppTheme.neonPurple,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
       ),
     );
@@ -394,10 +394,10 @@ class _RecurringScreenState extends State<RecurringScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppTheme.neonPurple.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(24),
             ),
-            child: const Icon(Icons.repeat_rounded, size: 40, color: AppTheme.neonPurple),
+            child: Icon(Icons.repeat_rounded, size: 40, color: Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(height: 20),
           Text(
@@ -405,7 +405,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
             style: GoogleFonts.poppins(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -414,7 +414,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 13,
-              color: AppTheme.textMuted,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               height: 1.5,
             ),
           ),
@@ -437,9 +437,9 @@ class _RecurringScreenState extends State<RecurringScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.bgCard,
+            color: Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(AppTheme.r16),
-            border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6).withValues(alpha: 0.1)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.15),
@@ -472,7 +472,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -501,13 +501,13 @@ class _RecurringScreenState extends State<RecurringScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Icon(Icons.schedule_rounded, size: 12, color: AppTheme.textMuted),
+                        Icon(Icons.schedule_rounded, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
                           'Next: ${DateFormat('MMM dd').format(item.nextDueDate)}',
                           style: GoogleFonts.poppins(
                             fontSize: 11,
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -525,7 +525,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.neonRed,
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -534,10 +534,10 @@ class _RecurringScreenState extends State<RecurringScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppTheme.neonRed.withValues(alpha: 0.08),
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.neonRed),
+                      child: Icon(Icons.delete_outline_rounded, size: 16, color: Theme.of(context).colorScheme.error),
                     ),
                   ),
                 ],

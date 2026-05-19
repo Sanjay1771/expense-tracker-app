@@ -62,7 +62,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: AppTheme.error),
+            Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 10),
             Text('Delete ${_friend.name}?'),
           ],
@@ -82,7 +82,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                 if (mounted) Navigator.pop(context);
               }
             },
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Delete'),
           ),
         ],
@@ -108,7 +108,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
               _loadData();
               widget.onUpdate();
             },
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Delete'),
           ),
         ],
@@ -228,7 +228,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                   backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                     (states) {
                       if (states.contains(WidgetState.selected)) {
-                        return type == 'given' ? AppTheme.error.withValues(alpha: 0.2) : AppTheme.success.withValues(alpha: 0.2);
+                        return type == 'given' ? Theme.of(context).colorScheme.error.withValues(alpha: 0.2) : Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2);
                       }
                       return null;
                     },
@@ -236,7 +236,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                   foregroundColor: WidgetStateProperty.resolveWith<Color?>(
                     (states) {
                       if (states.contains(WidgetState.selected)) {
-                        return type == 'given' ? AppTheme.error : AppTheme.success;
+                        return type == 'given' ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary;
                       }
                       return Theme.of(context).colorScheme.onSurface;
                     },
@@ -249,7 +249,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: type == 'given' ? AppTheme.error : AppTheme.success,
+                      color: type == 'given' ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary,
                     ),
                 decoration: InputDecoration(
                   hintText: '0.00',
@@ -294,7 +294,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                     widget.onUpdate();
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: type == 'given' ? AppTheme.error : AppTheme.success,
+                    backgroundColor: type == 'given' ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary,
                   ),
                   child: const Text('Add Transaction', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
@@ -318,7 +318,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
           ),
           IconButton(
             onPressed: _confirmDeleteFriend,
-            icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
+            icon: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.error),
           ),
           const SizedBox(width: 8),
         ],
@@ -437,7 +437,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   }
 
   Widget _buildSummaryCard() {
-    final statusColor = _summary.balance == 0 ? AppTheme.success : AppTheme.error;
+    final statusColor = _summary.balance == 0 ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error;
     String statusText;
     if (_summary.balance > 0) {
       statusText = "${_friend.name} owes you ₹${_summary.balance.toStringAsFixed(0)}";
@@ -521,7 +521,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
 
   Widget _buildTransactionCard(FriendTransactionModel tx) {
     final isGiven = tx.isGiven;
-    final color = isGiven ? AppTheme.error : AppTheme.success;
+    final color = isGiven ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary;
     final actionText = isGiven ? 'Given' : 'Received';
 
     return Container(

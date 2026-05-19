@@ -5,7 +5,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../services/supabase_db_service.dart';
-import '../theme/app_theme.dart';
 
 class ExportReportScreen extends StatefulWidget {
   const ExportReportScreen({super.key});
@@ -94,14 +93,14 @@ class _ExportReportScreenState extends State<ExportReportScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Monthly Report'),
-        backgroundColor: AppTheme.bg,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: PdfPreview(
         build: (format) => _generatePdf(format),
         maxPageWidth: 700,
         canChangePageFormat: false,
         canChangeOrientation: false,
-        loadingWidget: const CircularProgressIndicator(color: AppTheme.neonBlue),
+        loadingWidget: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
         pdfFileName: 'expense_report_${DateFormat('MMM_yyyy').format(DateTime.now())}.pdf',
         actions: [
             PdfPreviewAction(

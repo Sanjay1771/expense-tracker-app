@@ -23,37 +23,37 @@ class DashboardSummary extends StatelessWidget {
     return Column(
       children: [
         // Weekly: only expense (no weekly income)
-        _buildSingleRow('This Week', 'Expense', weeklyExpense, AppTheme.neonRed),
+        _buildSingleRow(context, 'This Week', 'Expense', weeklyExpense, Theme.of(context).colorScheme.error),
         const SizedBox(height: 12),
-        _buildRow('This Month', monthlyIncome, monthlyExpense),
+        _buildRow(context, 'This Month', monthlyIncome, monthlyExpense),
       ],
     );
   }
 
-  Widget _buildSingleRow(String label, String type, double amt, Color color) {
+  Widget _buildSingleRow(BuildContext context, String label, String type, double amt, Color color) {
     return Row(
       children: [
-        _card(label, type, amt, color),
+        _card(context, label, type, amt, color),
       ],
     );
   }
 
-  Widget _buildRow(String label, double inc, double exp) {
+  Widget _buildRow(BuildContext context, String label, double inc, double exp) {
     return Row(
       children: [
-        _card(label, 'Income', inc, AppTheme.neonGreen),
+        _card(context, label, 'Income', inc, Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
-        _card(label, 'Expense', exp, AppTheme.neonRed),
+        _card(context, label, 'Expense', exp, Theme.of(context).colorScheme.error),
       ],
     );
   }
 
-  Widget _card(String period, String type, double amt, Color color) {
+  Widget _card(BuildContext context, String period, String type, double amt, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.bgCard,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(AppTheme.r16),
           border: Border.all(color: color.withValues(alpha: 0.1)),
         ),
@@ -62,12 +62,12 @@ class DashboardSummary extends StatelessWidget {
           children: [
             Text(
               '$period $type',
-              style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.textMuted),
+              style: GoogleFonts.inter(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 4),
             Text(
               '₹${amt.toStringAsFixed(0)}',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: color,
@@ -103,7 +103,7 @@ class CategoryBarChart extends StatelessWidget {
       height: 200,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(AppTheme.r20),
       ),
       child: BarChart(
@@ -122,7 +122,7 @@ class CategoryBarChart extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       displayItems[val.toInt()].key.substring(0, 3),
-                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10),
                     ),
                   );
                 },
@@ -176,7 +176,7 @@ class TrendLineChart extends StatelessWidget {
       height: 180,
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(AppTheme.r20),
       ),
       child: LineChart(
@@ -190,13 +190,13 @@ class TrendLineChart extends StatelessWidget {
                 return FlSpot(e.key.toDouble(), e.value);
               }).toList(),
               isCurved: true,
-              color: AppTheme.neonBlue,
+              color: Theme.of(context).colorScheme.primary,
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppTheme.neonBlue.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               ),
             ),
           ],

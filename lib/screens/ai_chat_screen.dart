@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/ai_chat_service.dart';
 import '../models/transaction_model.dart';
-import '../theme/app_theme.dart';
 
 class AIChatScreen extends StatefulWidget {
   final List<TransactionModel> transactions;
@@ -86,14 +85,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             fontSize: 18,
-            color: AppTheme.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        backgroundColor: AppTheme.bgCard,
+        backgroundColor: Theme.of(context).cardTheme.color,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textSecondary, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -111,9 +110,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
             ),
           ),
           if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Center(child: CircularProgressIndicator(color: AppTheme.neonBlue, strokeWidth: 2)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary, strokeWidth: 2)),
             ),
           _buildInputArea(),
         ],
@@ -123,7 +122,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   Widget _buildChatBubble(ChatMessage msg) {
     final isUser = msg.isUser;
-    final color = isUser ? AppTheme.neonBlue : AppTheme.bgCard;
+    final color = isUser ? Theme.of(context).colorScheme.primary : Theme.of(context).cardTheme.color;
     final align = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
     return Padding(
@@ -151,7 +150,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
               msg.text,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: isUser ? Colors.white : AppTheme.textPrimary,
+                color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
                 height: 1.4,
               ),
             ),
@@ -165,25 +164,25 @@ class _AIChatScreenState extends State<AIChatScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
-        border: Border(top: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.1))),
+        color: Theme.of(context).cardTheme.color,
+        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6).withValues(alpha: 0.1))),
       ),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _controller,
-              style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontSize: 14),
+              style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Ask your AI assistant...',
-                hintStyle: GoogleFonts.poppins(color: AppTheme.textMuted, fontSize: 13),
+                hintStyle: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
                 border: InputBorder.none,
               ),
               onSubmitted: (_) => _handleSendMessage(),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.send_rounded, color: AppTheme.neonBlue),
+            icon: Icon(Icons.send_rounded, color: Theme.of(context).colorScheme.primary),
             onPressed: _handleSendMessage,
           ),
         ],

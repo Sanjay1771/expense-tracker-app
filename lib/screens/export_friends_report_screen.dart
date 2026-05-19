@@ -8,7 +8,6 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../models/friend_transaction_model.dart';
 import '../services/friend_service.dart';
-import '../theme/app_theme.dart';
 
 class ExportFriendsReportScreen extends StatefulWidget {
   const ExportFriendsReportScreen({super.key});
@@ -114,7 +113,7 @@ class _ExportFriendsReportScreenState extends State<ExportFriendsReportScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Friends Report'),
-        backgroundColor: AppTheme.bg,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: PdfPreview(
         build: (format) => _generatePdf(format),
@@ -122,7 +121,7 @@ class _ExportFriendsReportScreenState extends State<ExportFriendsReportScreen> {
         canChangePageFormat: false,
         canChangeOrientation: false,
         loadingWidget:
-            const CircularProgressIndicator(color: AppTheme.neonBlue),
+            CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
         pdfFileName:
             'friends_report_${DateFormat('MMM_yyyy').format(DateTime.now())}.pdf',
         actions: [

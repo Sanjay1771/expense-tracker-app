@@ -222,7 +222,7 @@ class FriendsScreenState extends State<FriendsScreen> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: AppTheme.error),
+            Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 10),
             Text('Delete ${friend.name}?'),
           ],
@@ -239,7 +239,7 @@ class FriendsScreenState extends State<FriendsScreen> {
               await _svc.deleteFriend(friend.id);
               _loadData();
             },
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Delete'),
           ),
         ],
@@ -264,8 +264,8 @@ class FriendsScreenState extends State<FriendsScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
-              title: Text('Delete ${friend.name}', style: const TextStyle(fontWeight: FontWeight.w500, color: AppTheme.error)),
+              leading: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.error),
+              title: Text('Delete ${friend.name}', style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.error)),
               onTap: () {
                 Navigator.pop(sheetCtx);
                 _confirmDeleteFriend(friend);
@@ -398,14 +398,14 @@ class FriendsScreenState extends State<FriendsScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.arrow_upward_rounded, size: 16, color: AppTheme.error),
+                    Icon(Icons.arrow_upward_rounded, size: 16, color: Theme.of(context).colorScheme.error),
                     const SizedBox(width: 6),
                     Text('Total Given', style: Theme.of(context).textTheme.labelMedium),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text('₹${given.toStringAsFixed(0)}',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.error)),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.error)),
               ],
             ),
           ),
@@ -417,14 +417,14 @@ class FriendsScreenState extends State<FriendsScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.arrow_downward_rounded, size: 16, color: AppTheme.success),
+                    Icon(Icons.arrow_downward_rounded, size: 16, color: Theme.of(context).colorScheme.tertiary),
                     const SizedBox(width: 6),
                     Text('Total Received', style: Theme.of(context).textTheme.labelMedium),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text('₹${received.toStringAsFixed(0)}',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.success)),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.tertiary)),
               ],
             ),
           ),
@@ -465,7 +465,7 @@ class FriendsScreenState extends State<FriendsScreen> {
 
   Widget _buildFriendCard(FriendModel friend, FriendSummary summary) {
     final isSettled = summary.balance == 0;
-    final statusColor = isSettled ? AppTheme.success : AppTheme.error;
+    final statusColor = isSettled ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error;
 
     String balanceText;
     if (summary.balance > 0) {
@@ -540,10 +540,10 @@ class FriendsScreenState extends State<FriendsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Given: ₹${summary.totalGiven.toStringAsFixed(0)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.error, fontWeight: FontWeight.bold)),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 2),
                         Text('Received: ₹${summary.totalReceived.toStringAsFixed(0)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.success, fontWeight: FontWeight.bold)),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.tertiary, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     Text(balanceText,

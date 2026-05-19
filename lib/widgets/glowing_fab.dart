@@ -56,7 +56,7 @@ class _GlowingFabState extends State<GlowingFab> with SingleTickerProviderStateM
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.seedColor.withValues(alpha: _glowAnim.value),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: _glowAnim.value),
                     blurRadius: 30,
                     spreadRadius: 4,
                   ),
@@ -64,7 +64,7 @@ class _GlowingFabState extends State<GlowingFab> with SingleTickerProviderStateM
               ),
               child: Icon(
                 widget.icon,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 size: 32,
               ),
             ),

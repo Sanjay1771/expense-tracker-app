@@ -1,10 +1,8 @@
-// Service to handle user settings
-// Theme: SharedPreferences (device-local)
-// Budgets: Firestore (cloud-synced)
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firestore_service.dart';
 
-class SettingsService {
+class SettingsService extends ChangeNotifier {
   static final SettingsService _instance = SettingsService._internal();
   factory SettingsService() => _instance;
   SettingsService._internal();
@@ -12,20 +10,28 @@ class SettingsService {
   static const String _themeKey = 'is_dark_mode';
   final _fs = FirestoreService();
 
-  // ── Theme (stays local — device preference) ──
+  bool _isDarkMode = true;
 
-  Future<void> setThemeMode(bool isDark) async {
+  bool get isDarkMode => _isDarkMode;
+  ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  // ── Theme Management ──
+
+  Future<void> loadThemePreference() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_themeKey, isDark);
+    _isDarkMode = prefs.getBool(_themeKey) ?? true;
+    notifyListeners();
   }
 
-  Future<bool> getThemeMode() async {
+  Future<void> setDarkMode(bool value) async {
+    if (_isDarkMode == value) return;
+    _isDarkMode = value;
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_themeKey) ?? true; // Default to dark mode
+    await prefs.setBool(_themeKey, value);
+    notifyListeners();
   }
 
   // ── Monthly Budget (Firestore-backed) ──
-  // userId param kept for API compat but ignored (uses Firebase UID)
 
   Future<void> setMonthlyBudget(int userId, double amount) async {
     await _fs.setMonthlyBudget(amount);

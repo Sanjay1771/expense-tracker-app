@@ -164,12 +164,12 @@ class HomeScreenState extends State<HomeScreen> {
     }).toList();
 
     return _isLoading
-        ? const Center(
-            child: CircularProgressIndicator(color: AppTheme.neonBlue))
+        ? Center(
+            child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary))
         : RefreshIndicator(
             onRefresh: loadData,
-            color: AppTheme.neonBlue,
-            backgroundColor: AppTheme.bgCard,
+            color: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).cardTheme.color,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
@@ -210,15 +210,15 @@ class HomeScreenState extends State<HomeScreen> {
                                     height: 44,
                                     margin: const EdgeInsets.only(right: 10),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.neonBlue.withValues(alpha: 0.1),
+                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
-                                        color: AppTheme.neonBlue.withValues(alpha: 0.2),
+                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                                       ),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.auto_awesome_rounded,
-                                      color: AppTheme.neonBlue,
+                                      color: Theme.of(context).colorScheme.primary,
                                       size: 20,
                                     ),
                                   ),
@@ -251,7 +251,7 @@ class HomeScreenState extends State<HomeScreen> {
                             _actionButton(
                               icon: Icons.arrow_downward_rounded,
                               label: 'Deposit',
-                              color: AppTheme.success,
+                              color: Theme.of(context).colorScheme.tertiary,
                               isActive: _currentFilter == TransactionType.income,
                               onTap: () => _toggleFilter(TransactionType.income),
                             ),
@@ -259,7 +259,7 @@ class HomeScreenState extends State<HomeScreen> {
                             _actionButton(
                               icon: Icons.arrow_upward_rounded,
                               label: 'Withdraw',
-                              color: AppTheme.error,
+                              color: Theme.of(context).colorScheme.error,
                               isActive: _currentFilter == TransactionType.expense,
                               onTap: () => _toggleFilter(TransactionType.expense),
                             ),
@@ -296,7 +296,7 @@ class HomeScreenState extends State<HomeScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppTheme.neonBlue
+                                color: Theme.of(context).colorScheme.primary
                                     .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -363,7 +363,7 @@ class HomeScreenState extends State<HomeScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isActive ? color.withValues(alpha: 0.1) : AppTheme.bgCard,
+            color: isActive ? color.withValues(alpha: 0.1) : Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(AppTheme.r16),
             border: Border.all(
               color: isActive ? color.withValues(alpha: 0.8) : color.withValues(alpha: 0.15),
@@ -390,7 +390,7 @@ class HomeScreenState extends State<HomeScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? color : AppTheme.textSecondary,
+                  color: isActive ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -409,11 +409,11 @@ class HomeScreenState extends State<HomeScreen> {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: AppTheme.neonBlue.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(Icons.receipt_long_rounded,
-                size: 36, color: AppTheme.neonBlue),
+            child: Icon(Icons.receipt_long_rounded,
+                size: 36, color: Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(height: 16),
           Text(
@@ -421,7 +421,7 @@ class HomeScreenState extends State<HomeScreen> {
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 6),
@@ -429,7 +429,7 @@ class HomeScreenState extends State<HomeScreen> {
             _currentFilter != null ? 'Try changing your filters' : 'Tap + to add your first one',
             style: GoogleFonts.poppins(
               fontSize: 13,
-              color: AppTheme.textMuted,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -452,21 +452,21 @@ class HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppTheme.bgCard,
-          title: Text('Add Bill Reminder', style: GoogleFonts.poppins(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+          backgroundColor: Theme.of(context).cardTheme.color,
+          title: Text('Add Bill Reminder', style: GoogleFonts.poppins(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: const InputDecoration(hintText: 'Bill Title (e.g. Rent)'),
               ),
               const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today_rounded, color: AppTheme.neonBlue),
-                title: Text(DateFormat('MMM dd, yyyy').format(selectedDate), style: const TextStyle(color: AppTheme.textPrimary)),
+                leading: Icon(Icons.calendar_today_rounded, color: Theme.of(context).colorScheme.primary),
+                title: Text(DateFormat('MMM dd, yyyy').format(selectedDate), style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 onTap: () async {
                   final d = await showDatePicker(
                     context: context,
@@ -505,12 +505,12 @@ class HomeScreenState extends State<HomeScreen> {
     final progress = (_monthlyExpense / _monthlyBudget).clamp(0.0, 1.0);
     final isWarning = progress >= 0.8;
     final isAlert = progress >= 1.0;
-    final color = isAlert ? AppTheme.neonRed : (isWarning ? AppTheme.neonOrange : AppTheme.neonBlue);
+    final color = isAlert ? Theme.of(context).colorScheme.error : (isWarning ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.primary);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(AppTheme.r16),
         border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
@@ -525,7 +525,7 @@ class HomeScreenState extends State<HomeScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
@@ -543,7 +543,7 @@ class HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: AppTheme.bgCardLight,
+              backgroundColor: Theme.of(context).cardTheme.color?.withValues(alpha: 0.5),
               color: color,
               minHeight: 8,
             ),
@@ -554,12 +554,12 @@ class HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 '₹${_monthlyExpense.toStringAsFixed(0)} / ₹${_monthlyBudget.toStringAsFixed(0)}',
-                style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary),
+                style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               if (isAlert)
-                Text('Limit Exceeded!', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.neonRed, fontWeight: FontWeight.w600))
+                Text('Limit Exceeded!', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600))
               else if (isWarning)
-                Text('Approaching Limit', style: GoogleFonts.poppins(fontSize: 11, color: AppTheme.neonOrange, fontWeight: FontWeight.w600)),
+                Text('Approaching Limit', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.w600)),
             ],
           ),
         ],
@@ -579,12 +579,12 @@ class HomeScreenState extends State<HomeScreen> {
               style: GoogleFonts.poppins(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             IconButton(
               onPressed: _showAddReminderDialog,
-              icon: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.neonBlue, size: 24),
+              icon: Icon(Icons.add_circle_outline_rounded, color: Theme.of(context).colorScheme.primary, size: 24),
             ),
           ],
         ),
@@ -603,9 +603,9 @@ class HomeScreenState extends State<HomeScreen> {
                 width: 160,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.bgCard,
+                  color: Theme.of(context).cardTheme.color,
                   borderRadius: BorderRadius.circular(AppTheme.r16),
-                  border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
+                  border: Border.all(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6).withValues(alpha: 0.1)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -616,7 +616,7 @@ class HomeScreenState extends State<HomeScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -627,14 +627,14 @@ class HomeScreenState extends State<HomeScreen> {
                         Icon(
                           Icons.calendar_today_rounded,
                           size: 12,
-                          color: isOverdue ? AppTheme.neonRed : AppTheme.textMuted,
+                          color: isOverdue ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           DateFormat('MMM dd').format(reminder.date),
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: isOverdue ? AppTheme.neonRed : AppTheme.textSecondary,
+                            color: isOverdue ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: isOverdue ? FontWeight.w600 : FontWeight.w400,
                           ),
                         ),
@@ -653,7 +653,7 @@ class HomeScreenState extends State<HomeScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: reminder.isCompleted ? AppTheme.neonGreen : AppTheme.neonBlue,
+                          color: reminder.isCompleted ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -671,7 +671,7 @@ class HomeScreenState extends State<HomeScreen> {
     if (_aiAnalysis == null) return const SizedBox();
 
     final isIncreasing = _aiAnalysis!.isSpendingIncreasing;
-    final accentColor = isIncreasing ? AppTheme.neonPink : AppTheme.neonPurple;
+    final accentColor = isIncreasing ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.primary;
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -690,7 +690,7 @@ class HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.bgCard,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(AppTheme.r20),
           border: Border.all(
             color: accentColor.withValues(alpha: 0.15),
@@ -730,7 +730,7 @@ class HomeScreenState extends State<HomeScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -751,7 +751,7 @@ class HomeScreenState extends State<HomeScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -760,7 +760,7 @@ class HomeScreenState extends State<HomeScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -769,7 +769,7 @@ class HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (isIncreasing ? AppTheme.neonRed : AppTheme.neonGreen)
+                    color: (isIncreasing ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary)
                         .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -777,7 +777,7 @@ class HomeScreenState extends State<HomeScreen> {
                     isIncreasing
                         ? Icons.trending_up_rounded
                         : Icons.trending_down_rounded,
-                    color: isIncreasing ? AppTheme.neonRed : AppTheme.neonGreen,
+                    color: isIncreasing ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary,
                     size: 20,
                   ),
                 ),
@@ -785,19 +785,19 @@ class HomeScreenState extends State<HomeScreen> {
             ),
             
             const SizedBox(height: 18),
-            Divider(color: AppTheme.textMuted.withValues(alpha: 0.08), height: 1),
+            Divider(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6).withValues(alpha: 0.08), height: 1),
             const SizedBox(height: 18),
 
             // Detailed Analysis Points
             _insightRow(
               icon: Icons.category_rounded,
-              color: AppTheme.neonBlue,
+              color: Theme.of(context).colorScheme.primary,
               text: _aiAnalysis!.highestCategory,
             ),
             const SizedBox(height: 12),
             _insightRow(
               icon: Icons.speed_rounded,
-              color: AppTheme.neonOrange,
+              color: Theme.of(context).colorScheme.secondary,
               text: _aiAnalysis!.weeklyTrend,
             ),
             const SizedBox(height: 12),
@@ -838,7 +838,7 @@ class HomeScreenState extends State<HomeScreen> {
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: isSuggestion ? FontWeight.w600 : FontWeight.w500,
-              color: isSuggestion ? AppTheme.textPrimary : AppTheme.textSecondary,
+              color: isSuggestion ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),

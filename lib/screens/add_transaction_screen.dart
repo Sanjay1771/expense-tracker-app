@@ -123,7 +123,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(children: [
-              const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20),
+              Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.tertiary, size: 20),
               const SizedBox(width: 10),
               Text('Transaction added!', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white)),
             ]),
@@ -141,7 +141,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
         final errorMsg = e.toString().replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(errorMsg, style: const TextStyle(color: Colors.white)),
-          backgroundColor: AppTheme.error,
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -194,8 +194,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
                           (states) {
                             if (states.contains(WidgetState.selected)) {
                               return _type == TransactionType.income
-                                  ? AppTheme.success.withValues(alpha: 0.2)
-                                  : AppTheme.error.withValues(alpha: 0.2);
+                                  ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2)
+                                  : Theme.of(context).colorScheme.error.withValues(alpha: 0.2);
                             }
                             return null;
                           },
@@ -203,7 +203,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
                         foregroundColor: WidgetStateProperty.resolveWith<Color?>(
                           (states) {
                             if (states.contains(WidgetState.selected)) {
-                              return _type == TransactionType.income ? AppTheme.success : AppTheme.error;
+                              return _type == TransactionType.income ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error;
                             }
                             return Theme.of(context).colorScheme.onSurface;
                           },
@@ -219,7 +219,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          color: _type == TransactionType.income ? AppTheme.success : AppTheme.error,
+                          color: _type == TransactionType.income ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
                         ),
                     decoration: InputDecoration(
                       hintText: '0.00',
@@ -346,7 +346,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
                     child: FilledButton(
                       onPressed: _saving ? null : _save,
                       style: FilledButton.styleFrom(
-                        backgroundColor: _type == TransactionType.income ? AppTheme.success : AppTheme.error,
+                        backgroundColor: _type == TransactionType.income ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
                       ),
                       child: _saving
                           ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))

@@ -18,7 +18,7 @@ import 'services/settings_service.dart';
 import 'services/notification_service.dart';
 import 'services/background_service.dart';
 
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
+
 
 /// Top-level FCM background handler (MUST be top-level, runs in separate isolate)
 @pragma('vm:entry-point')
@@ -51,8 +51,7 @@ void main() async {
   await BackgroundService.initialize();
 
   final settings = SettingsService();
-  final isDark = await settings.getThemeMode();
-  themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
+  await settings.loadThemePreference();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -66,15 +65,16 @@ class ExpenseTrackerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, mode, child) {
+    final settings = SettingsService();
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, child) {
         return MaterialApp(
-          title: 'Expense Tracker',
+          title: 'SmartSpend',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: mode,
+          themeMode: settings.themeMode,
           home: const AuthGate(),
         );
       },
@@ -137,7 +137,7 @@ class _AuthGateState extends State<AuthGate> {
 
   Widget _splash() {
     return Scaffold(
-      backgroundColor: AppTheme.bg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -148,13 +148,13 @@ class _AuthGateState extends State<AuthGate> {
               decoration: BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.circular(22),
-                boxShadow: [BoxShadow(color: AppTheme.seedColor.withValues(alpha: 0.4), blurRadius: 16)],
+                boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4), blurRadius: 16)],
               ),
               child: const Icon(Icons.account_balance_wallet_rounded,
                   color: Colors.white, size: 40),
             ),
             const SizedBox(height: 20),
-            const CircularProgressIndicator(color: AppTheme.neonBlue),
+            CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
           ],
         ),
       ),
@@ -236,7 +236,7 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bg,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         // PageView enables swipe between tabs
         child: PageView(

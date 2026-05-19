@@ -4,7 +4,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
-import '../main.dart';
 import 'export_report_screen.dart';
 import 'calendar_screen.dart';
 
@@ -23,7 +22,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   String _userName = 'User';
   String _userEmail = 'Not available';
-  bool _darkMode = true;
   String _appVersion = 'Version 1.0.0 (Build 1)';
 
   late AnimationController _animCtrl;
@@ -39,12 +37,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _animCtrl.forward();
     _loadUserProfile();
-    _loadSettings();
     _loadAppInfo();
+    
+    // Add listener to rebuild when theme changes globally
+    _settings.addListener(_onSettingsChanged);
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _settings.removeListener(_onSettingsChanged);
     _animCtrl.dispose();
     super.dispose();
   }
@@ -99,15 +104,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }
   }
 
-  Future<void> _loadSettings() async {
-    final isDark = await _settings.getThemeMode();
-    if (mounted) {
-      setState(() {
-        _darkMode = isDark;
-      });
-    }
-  }
-
   Future<void> _loadAppInfo() async {
     try {
       final info = await PackageInfo.fromPlatform();
@@ -134,7 +130,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             child: const Text('Logout'),
           ),
         ],
@@ -177,21 +176,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildProfileHeader() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 32, 20, 36),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF6C5CE7),
-            Color(0xFF4834D4),
-            Color(0xFF00CEFF),
-          ],
-          stops: [0.0, 0.5, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(36),
           bottomRight: Radius.circular(36),
         ),
@@ -200,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           Text(
             'My Profile',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onPrimaryContainer),
           ),
           const SizedBox(height: 24),
           Container(
@@ -209,23 +200,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.4),
+                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.4),
                 width: 3,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
             child: CircleAvatar(
               radius: 40,
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
-              child: const Icon(
+              backgroundColor: colorScheme.onPrimaryContainer.withValues(alpha: 0.15),
+              child: Icon(
                 Icons.person_rounded,
-                color: Colors.white,
+                color: colorScheme.onPrimaryContainer,
                 size: 42,
               ),
             ),
@@ -233,25 +217,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 16),
           Text(
             _userName,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onPrimaryContainer),
           ),
           const SizedBox(height: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: colorScheme.onPrimaryContainer.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               _userEmail,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colorScheme.onPrimaryContainer),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             'Track smart. Spend wise. Save more.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: Colors.white70),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: colorScheme.onPrimaryContainer.withValues(alpha: 0.7)),
           ),
         ],
       ),
@@ -270,7 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               icon: Icons.picture_as_pdf_rounded,
               label: 'Export Data',
               subtitle: 'PDF report',
-              gradient: const [Color(0xFFFF5252), Color(0xFFD32F2F)],
+              baseColor: Theme.of(context).colorScheme.error,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ExportReportScreen()),
@@ -281,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               icon: Icons.calendar_month_rounded,
               label: 'Calendar',
               subtitle: 'Spending map',
-              gradient: const [Color(0xFF00E676), Color(0xFF00C853)],
+              baseColor: Theme.of(context).colorScheme.primary,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const CalendarScreen()),
@@ -297,26 +281,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     required IconData icon,
     required String label,
     required String subtitle,
-    required List<Color> gradient,
+    required Color baseColor,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                gradient[0].withValues(alpha: 0.15),
-                gradient[1].withValues(alpha: 0.05),
-              ],
-            ),
+            color: baseColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppTheme.r20),
             border: Border.all(
-              color: gradient[0].withValues(alpha: 0.2),
+              color: baseColor.withValues(alpha: 0.2),
             ),
           ),
           child: Column(
@@ -326,17 +304,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: gradient),
+                  color: baseColor,
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradient[0].withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
-                child: Icon(icon, color: Colors.white, size: 22),
+                child: Icon(icon, color: colorScheme.surface, size: 22),
               ),
               const SizedBox(height: 14),
               Text(
@@ -356,6 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildPreferencesSection() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -365,31 +337,29 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           decoration: BoxDecoration(
             color: Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(AppTheme.r16),
-            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
+            border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: Column(
             children: [
               _tile(
-                icon: Icons.dark_mode_rounded,
-                color: Colors.purpleAccent,
-                title: 'Dark Mode',
-                subtitle: _darkMode ? 'Enabled' : 'Disabled',
+                icon: Icons.brightness_6_outlined,
+                color: colorScheme.primary,
+                title: 'Theme Mode',
+                subtitle: _settings.isDarkMode ? 'Dark Mode' : 'Light Mode',
                 trailing: Switch(
-                  value: _darkMode,
+                  value: _settings.isDarkMode,
                   onChanged: (v) async {
-                    setState(() => _darkMode = v);
-                    await _settings.setThemeMode(v);
-                    themeNotifier.value = v ? ThemeMode.dark : ThemeMode.light;
+                    await _settings.setDarkMode(v);
                   },
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
+                child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.1)),
               ),
               _tile(
                 icon: Icons.info_outline_rounded,
-                color: Theme.of(context).colorScheme.primary,
+                color: colorScheme.secondary,
                 title: 'App Version',
                 subtitle: _appVersion,
                 trailing: const SizedBox.shrink(),
@@ -442,6 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildLogoutButton() {
+    final errorColor = Theme.of(context).colorScheme.error;
     return SizedBox(
       width: double.infinity,
       height: 54,
@@ -450,8 +421,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         icon: const Icon(Icons.logout_rounded, size: 20),
         label: const Text('Logout', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.error,
-          side: const BorderSide(color: AppTheme.error),
+          foregroundColor: errorColor,
+          side: BorderSide(color: errorColor),
         ),
       ),
     );

@@ -327,16 +327,16 @@ class _CalendarScreenState extends State<CalendarScreen> with SingleTickerProvid
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.error.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppTheme.error.withValues(alpha: 0.2)),
+                border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
               ),
               child: Text(
                 '₹${dayTotal.toStringAsFixed(0)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.error,
+                  color: Theme.of(context).colorScheme.error,
                 ),
               ),
             ),
@@ -408,7 +408,7 @@ class _CalendarScreenState extends State<CalendarScreen> with SingleTickerProvid
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: isExpense ? AppTheme.error : AppTheme.success,
+                  color: isExpense ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary,
                 ),
               ),
             ],

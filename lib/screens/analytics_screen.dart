@@ -27,7 +27,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
   final _settings = SettingsService();
   Map<String, double> _catBudgets = {};
   String _insightText = "Checking your spending habits...";
-  Color _insightColor = AppTheme.seedColor;
+  bool _insightIsError = false;
 
   @override
   void initState() {
@@ -63,7 +63,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
 
   void _computeInsights(List<TransactionModel> txns, Map<String, double> cats, Map<String, double> budgets, AIAnalysis ai) {
     _insightText = ai.insightMessage;
-    _insightColor = ai.isSpendingIncreasing ? AppTheme.error : AppTheme.seedColor;
+    _insightIsError = ai.isSpendingIncreasing;
 
     String? exceededCat;
     for (final entry in cats.entries) {
@@ -76,7 +76,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
 
     if (exceededCat != null) {
       _insightText += "\nWarning: You exceeded your limit for $exceededCat!";
-      _insightColor = AppTheme.error;
+      _insightIsError = true;
     }
   }
 
@@ -138,7 +138,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
                         child: _chartCard(
                           title: 'Expense Distribution',
                           icon: Icons.pie_chart_rounded,
-                          color: AppTheme.success,
+                          color: Theme.of(context).colorScheme.tertiary,
                           child: Column(
                             children: [
                               SizedBox(
@@ -314,11 +314,11 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     final neonColors = [
       Theme.of(context).colorScheme.primary,
       Colors.purpleAccent,
-      AppTheme.success,
+      Theme.of(context).colorScheme.tertiary,
       Colors.orangeAccent,
       Colors.pinkAccent,
       Colors.yellowAccent,
-      AppTheme.error,
+      Theme.of(context).colorScheme.error,
     ];
 
     return BarChartData(
@@ -394,11 +394,11 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     final neonColors = [
       Theme.of(context).colorScheme.primary,
       Colors.purpleAccent,
-      AppTheme.success,
+      Theme.of(context).colorScheme.tertiary,
       Colors.orangeAccent,
       Colors.pinkAccent,
       Colors.yellowAccent,
-      AppTheme.error,
+      Theme.of(context).colorScheme.error,
     ];
     int idx = 0;
 
@@ -436,11 +436,11 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     final neonColors = [
       Theme.of(context).colorScheme.primary,
       Colors.purpleAccent,
-      AppTheme.success,
+      Theme.of(context).colorScheme.tertiary,
       Colors.orangeAccent,
       Colors.pinkAccent,
       Colors.yellowAccent,
-      AppTheme.error,
+      Theme.of(context).colorScheme.error,
     ];
     int idx = 0;
     return _expByCategory.entries.map((e) {
@@ -482,17 +482,18 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       );
 
   Widget _buildInsightCard() {
+    final insightColor = _insightIsError ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _insightColor.withValues(alpha: 0.1),
+        color: insightColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppTheme.r16),
-        border: Border.all(color: _insightColor.withValues(alpha: 0.3)),
+        border: Border.all(color: insightColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          Icon(Icons.lightbulb_outline_rounded, color: _insightColor, size: 24),
+          Icon(Icons.lightbulb_outline_rounded, color: insightColor, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -510,7 +511,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       final budget = _catBudgets[e.key]!;
       final spending = e.value;
       final progress = (spending / budget).clamp(0.0, 1.0);
-      final color = progress >= 1.0 ? AppTheme.error : (progress >= 0.8 ? Colors.orangeAccent : Theme.of(context).colorScheme.primary);
+      final color = progress >= 1.0 ? Theme.of(context).colorScheme.error : (progress >= 0.8 ? Colors.orangeAccent : Theme.of(context).colorScheme.primary);
 
       return Padding(
         padding: const EdgeInsets.only(bottom: 16),

@@ -56,7 +56,13 @@ class _BalanceCardState extends State<BalanceCard>
           decoration: BoxDecoration(
             gradient: AppTheme.primaryGradient,
             borderRadius: BorderRadius.circular(AppTheme.r28),
-            boxShadow: AppTheme.neonGlow,
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +73,7 @@ class _BalanceCardState extends State<BalanceCard>
                   Text(
                     'Total Balance',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Colors.white70,
                           letterSpacing: 0.5,
                         ),
                   ),
@@ -99,7 +105,6 @@ class _BalanceCardState extends State<BalanceCard>
                       icon: Icons.arrow_downward_rounded,
                       label: 'Income',
                       amount: widget.totalIncome,
-                      color: AppTheme.success,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -109,7 +114,6 @@ class _BalanceCardState extends State<BalanceCard>
                       icon: Icons.arrow_upward_rounded,
                       label: 'Expense',
                       amount: widget.totalExpense,
-                      color: AppTheme.error,
                     ),
                   ),
                 ],
@@ -126,10 +130,9 @@ class _BalanceCardState extends State<BalanceCard>
     required IconData icon,
     required String label,
     required double amount,
-    required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppTheme.r16),
@@ -139,10 +142,10 @@ class _BalanceCardState extends State<BalanceCard>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 16),
+            child: Icon(icon, color: Colors.white, size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -151,16 +154,19 @@ class _BalanceCardState extends State<BalanceCard>
               children: [
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white70,
                       ),
                 ),
                 Text(
                   '₹${_fmt(amount)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Colors.white,
                       ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

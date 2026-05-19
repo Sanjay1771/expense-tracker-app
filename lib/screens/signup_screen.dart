@@ -67,7 +67,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Account created successfully. Please log in.'),
-            backgroundColor: AppTheme.success,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -106,9 +106,11 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       decoration: BoxDecoration(
                         gradient: AppTheme.primaryGradient,
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: AppTheme.neonGlow,
+                        boxShadow: [
+                          BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 8)),
+                        ],
                       ),
-                      child: const Icon(Icons.person_add_rounded, color: Colors.white, size: 40),
+                      child: Icon(Icons.person_add_rounded, color: Theme.of(context).colorScheme.surface, size: 40),
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -139,13 +141,13 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.error.withValues(alpha: 0.1),
+                                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(children: [
-                                  const Icon(Icons.error_outline_rounded, color: AppTheme.error, size: 20),
+                                  Icon(Icons.error_outline_rounded, color: Theme.of(context).colorScheme.error, size: 20),
                                   const SizedBox(width: 12),
-                                  Expanded(child: Text(_error!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.error))),
+                                  Expanded(child: Text(_error!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error))),
                                 ]),
                               ),
                               const SizedBox(height: 20),
@@ -226,9 +228,9 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                               height: 56,
                               child: FilledButton(
                                 onPressed: _loading ? null : _signup,
-                                style: FilledButton.styleFrom(backgroundColor: AppTheme.seedColor),
+                                style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                                 child: _loading
-                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                                    ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary, strokeWidth: 3))
                                     : const Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               ),
                             ),
@@ -243,7 +245,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                         Text('Already have an account? ', style: Theme.of(context).textTheme.bodyMedium),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
-                          child: Text('Sign In', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.seedColor)),
+                          child: Text('Sign In', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.primary)),
                         ),
                       ],
                     ),

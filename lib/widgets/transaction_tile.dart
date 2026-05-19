@@ -23,7 +23,7 @@ class TransactionTile extends StatelessWidget {
   void _showDetailSheet(BuildContext context) {
     final category = transaction.categoryData;
     final isIncome = transaction.type == TransactionType.income;
-    final amountColor = isIncome ? AppTheme.success : AppTheme.error;
+    final amountColor = isIncome ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error;
     final prefix = isIncome ? '+' : '-';
     final typeLabel = isIncome ? 'Income' : 'Expense';
 
@@ -112,7 +112,7 @@ class TransactionTile extends StatelessWidget {
                       Icons.calendar_today_rounded,
                       'Date',
                       DateFormat('EEEE, MMM dd, yyyy').format(transaction.date),
-                      AppTheme.seedColor,
+                      Theme.of(context).colorScheme.primary,
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -130,7 +130,7 @@ class TransactionTile extends StatelessWidget {
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                         ),
                       ),
-                      _detailRow(context, Icons.sticky_note_2_rounded, 'Note', transaction.note!, Colors.purpleAccent),
+                      _detailRow(context, Icons.sticky_note_2_rounded, 'Note', transaction.note!, Theme.of(context).colorScheme.secondary),
                     ],
                   ],
                 ),
@@ -152,7 +152,8 @@ class TransactionTile extends StatelessWidget {
                         _confirmDelete(context);
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.error,
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
                       ),
                       icon: const Icon(Icons.delete_rounded, size: 18),
                       label: const Text('Delete'),
@@ -183,7 +184,10 @@ class TransactionTile extends StatelessWidget {
               Navigator.pop(ctx);
               onDelete?.call();
             },
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -236,7 +240,7 @@ class TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final category = transaction.categoryData;
     final isIncome = transaction.type == TransactionType.income;
-    final amountColor = isIncome ? AppTheme.success : AppTheme.error;
+    final amountColor = isIncome ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error;
     final prefix = isIncome ? '+' : '-';
     final hasNote = transaction.note != null && transaction.note!.isNotEmpty;
 

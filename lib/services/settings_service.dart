@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'firestore_service.dart';
 
 class SettingsService extends ChangeNotifier {
   static final SettingsService _instance = SettingsService._internal();
@@ -8,7 +7,6 @@ class SettingsService extends ChangeNotifier {
   SettingsService._internal();
 
   static const String _themeKey = 'is_dark_mode';
-  final _fs = FirestoreService();
 
   bool _isDarkMode = true;
 
@@ -31,23 +29,27 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Monthly Budget (Firestore-backed) ──
+  // ── Monthly Budget (SharedPreferences-backed) ──
 
   Future<void> setMonthlyBudget(int userId, double amount) async {
-    await _fs.setMonthlyBudget(amount);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('budget_monthly_$userId', amount);
   }
 
   Future<double> getMonthlyBudget(int userId) async {
-    return await _fs.getMonthlyBudget();
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('budget_monthly_$userId') ?? 0.0;
   }
 
-  // ── Category Budgets (Firestore-backed) ──
+  // ── Category Budgets (SharedPreferences-backed) ──
 
   Future<void> setCategoryBudget(int userId, String category, double amount) async {
-    await _fs.setCategoryBudget(category, amount);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('budget_${userId}_$category', amount);
   }
 
   Future<double> getCategoryBudget(int userId, String category) async {
-    return await _fs.getCategoryBudget(category);
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('budget_${userId}_$category') ?? 0.0;
   }
 }

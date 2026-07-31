@@ -3,8 +3,7 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
 class SignupScreen extends StatefulWidget {
-  final VoidCallback onSignupSuccess;
-  const SignupScreen({super.key, required this.onSignupSuccess});
+  const SignupScreen({super.key});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();

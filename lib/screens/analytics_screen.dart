@@ -7,7 +7,7 @@ import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_list_item.dart';
 import '../services/settings_service.dart';
-import '../services/ai_service.dart';
+
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -47,8 +47,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
       budgets[cat] = await _settings.getCategoryBudget(uid, cat);
     }
 
-    final aiAnalysis = AIService.analyze(txns, isSample: txns.isEmpty);
-    _computeInsights(txns, cats, budgets, aiAnalysis);
+    _computeInsights(txns, cats, budgets);
 
     if (mounted) {
       setState(() {
@@ -61,9 +60,9 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
-  void _computeInsights(List<TransactionModel> txns, Map<String, double> cats, Map<String, double> budgets, AIAnalysis ai) {
-    _insightText = ai.insightMessage;
-    _insightIsError = ai.isSpendingIncreasing;
+  void _computeInsights(List<TransactionModel> txns, Map<String, double> cats, Map<String, double> budgets) {
+    _insightText = "Great job! You are within your budget limits.";
+    _insightIsError = false;
 
     String? exceededCat;
     for (final entry in cats.entries) {
@@ -75,7 +74,7 @@ class AnalyticsScreenState extends State<AnalyticsScreen> {
     }
 
     if (exceededCat != null) {
-      _insightText += "\nWarning: You exceeded your limit for $exceededCat!";
+      _insightText = "Warning: You exceeded your limit for $exceededCat!";
       _insightIsError = true;
     }
   }

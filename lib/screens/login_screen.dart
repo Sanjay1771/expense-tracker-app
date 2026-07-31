@@ -4,8 +4,7 @@ import '../theme/app_theme.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  final VoidCallback onLoginSuccess;
-  const LoginScreen({super.key, required this.onLoginSuccess});
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -53,8 +52,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       setState(() => _loading = false);
       if (err != null) {
         setState(() => _error = err);
-      } else {
-        widget.onLoginSuccess();
       }
     }
   }
@@ -69,8 +66,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       setState(() => _loading = false);
       if (err != null) {
         setState(() => _error = err);
-      } else {
-        widget.onLoginSuccess();
       }
     }
   }
@@ -227,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       children: [
                         Text("Don't have an account? ", style: Theme.of(context).textTheme.bodyMedium),
                         GestureDetector(
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SignupScreen(onSignupSuccess: widget.onLoginSuccess))),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupScreen())),
                           child: Text('Sign Up', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.primary)),
                         ),
                       ],

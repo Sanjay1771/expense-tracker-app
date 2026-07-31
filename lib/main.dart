@@ -1,12 +1,11 @@
 // Main entry point — dark theme, auth flow, swipeable 4-tab nav with glowing FAB
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
+import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_transaction_screen.dart';
@@ -20,31 +19,16 @@ import 'services/background_service.dart';
 
 
 
-/// Top-level FCM background handler (MUST be top-level, runs in separate isolate)
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  debugPrint('🔥 FCM background message: ${message.messageId}');
-  // Firebase automatically shows the notification for background messages
-  // This handler is for any additional data processing you need
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase FIRST
-  await Firebase.initializeApp();
-
   // Initialize Supabase
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
     anonKey: SupabaseConfig.supabaseAnonKey,
   );
 
-  // Register FCM background handler (before any other Firebase calls)
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  // Initialize notifications (local + FCM) early so they're ready before any screen loads
+  // Initialize notifications early so they're ready before any screen loads
   await NotificationService().initialize();
 
   // Initialize WorkManager for background recurring transaction checks
@@ -75,7 +59,7 @@ class ExpenseTrackerApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: settings.themeMode,
-          home: const AuthGate(),
+          home: const SplashScreen(),
         );
       },
     );
@@ -108,6 +92,9 @@ class _AuthGateState extends State<AuthGate> {
         return;
       }
 
+      // Explicitly show loading state while validating/syncing user session
+      if (mounted) setState(() { _loading = true; });
+
       try {
         final ok = await _auth.tryAutoLogin();
         if (!ok) {
@@ -120,8 +107,6 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
-  void _onLogin() => setState(() => _loggedIn = true);
-  
   void _onLogout() async {
     await _auth.logout();
     setState(() => _loggedIn = false);
@@ -131,7 +116,7 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     if (_loading) return _splash();
     // Safe Navigation Routing
-    if (!_loggedIn) return LoginScreen(onLoginSuccess: _onLogin);
+    if (!_loggedIn) return const LoginScreen();
     return MainNavigation(onLogout: _onLogout);
   }
 

@@ -4,18 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/transaction_model.dart';
 import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+import '../services/database_service.dart';
 import '../services/supabase_db_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/animated_list_item.dart';
-
 import '../services/settings_service.dart';
 import '../models/bill_reminder_model.dart';
 import 'package:intl/intl.dart';
-import '../services/ai_service.dart';
-import 'ai_chat_screen.dart';
 import '../services/recurring_service.dart';
 
 import '../widgets/dashboard_widgets.dart';
@@ -28,14 +25,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  final FirestoreService _fs = FirestoreService();
+  final DatabaseService _fs = DatabaseService();
   final SupabaseDbService _db = SupabaseDbService();
   final AuthService _auth = AuthService();
   List<TransactionModel> _transactions = [];
   double _totalIncome = 0;
   double _totalExpense = 0;
   bool _isLoading = true;
-  AIAnalysis? _aiAnalysis;
 
   // Defines the current filter constraint
   TransactionType? _currentFilter;
@@ -61,7 +57,7 @@ class HomeScreenState extends State<HomeScreen> {
   /// Load all data for the current user
   Future<void> loadData() async {
     setState(() => _isLoading = true);
-    final uid = _auth.userId;
+    final uid = _auth.currentUser?.id ?? 0;
 
     // Check and add any due recurring transactions before loading
     await RecurringService().checkDueTransactions(uid);
@@ -70,7 +66,7 @@ class HomeScreenState extends State<HomeScreen> {
     final inc = await _db.getTotalIncome();
     final exp = await _db.getTotalExpense();
     final budget = await _settings.getMonthlyBudget(uid);
-    final reminderMaps = await _fs.getReminders();
+    final reminderMaps = await _fs.getReminders(uid);
     final reminders = reminderMaps.map((m) => BillReminder.fromMap(m)).toList();
     
     // Weekly/Monthly stats
@@ -95,17 +91,12 @@ class HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    if (mounted) {
-      // Analyze real data with AI service
-      final analysis = AIService.analyze(txns);
-
       setState(() {
         _transactions = txns;
         _totalIncome = inc;
         _totalExpense = exp;
         _monthlyBudget = budget;
         _reminders = reminders;
-        _aiAnalysis = analysis;
         
         _weeklyIncome = weeklyInc;
         _weeklyExpense = weeklyExp;
@@ -114,7 +105,6 @@ class HomeScreenState extends State<HomeScreen> {
         
         _isLoading = false;
       });
-    }
   }
 
   Future<void> _deleteTransaction(TransactionModel tx) async {
@@ -138,17 +128,7 @@ class HomeScreenState extends State<HomeScreen> {
 
 
 
-  void _openAIChat() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AIChatScreen(
-          transactions: _transactions,
-          balance: _totalIncome - _totalExpense,
-        ),
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -199,32 +179,7 @@ class HomeScreenState extends State<HomeScreen> {
                                 ),
                               ],
                             ),
-                            // AI Chat and Notifications
-                            Row(
-                              children: [
-
-                                GestureDetector(
-                                  onTap: _openAIChat,
-                                  child: Container(
-                                    width: 44,
-                                    height: 44,
-                                    margin: const EdgeInsets.only(right: 10),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.auto_awesome_rounded,
-                                      color: Theme.of(context).colorScheme.primary,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            // Quick Actions placeholder could go here
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -274,11 +229,7 @@ class HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 28),
                         ],
 
-                        // ── AI Insights Card ─────────────────────
-                        if (_aiAnalysis != null) ...[
-                          _buildAIInsightsCard(),
-                          const SizedBox(height: 28),
-                        ],
+
 
                         // ── Advanced Dashboard Section ──────────
                         _buildAdvancedDashboard(),
@@ -488,7 +439,7 @@ class HomeScreenState extends State<HomeScreen> {
                   'title': titleCtrl.text,
                   'date': selectedDate.toIso8601String(),
                   'user_id': _auth.userId,
-                  'is_completed': false,
+                  'is_completed': 0,
                 });
                 if (ctx.mounted) Navigator.pop(ctx);
                 loadData();
@@ -643,8 +594,8 @@ class HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 6),
                     GestureDetector(
                       onTap: () async {
-                        if (reminder.docId != null) {
-                          await _fs.updateReminder(reminder.docId!, !reminder.isCompleted);
+                        if (reminder.id != null) {
+                          await _fs.updateReminder(reminder.id!, !reminder.isCompleted);
                         }
                         loadData();
                       },
@@ -667,184 +618,7 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAIInsightsCard() {
-    if (_aiAnalysis == null) return const SizedBox();
 
-    final isIncreasing = _aiAnalysis!.isSpendingIncreasing;
-    final accentColor = isIncreasing ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.primary;
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(AppTheme.r20),
-          border: Border.all(
-            color: accentColor.withValues(alpha: 0.15),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.auto_awesome_rounded,
-                        color: accentColor,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Smart AI Analysis',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            
-            // Prediction Section
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Monthly Prediction',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₹${_aiAnalysis!.predictedNextMonth.toStringAsFixed(0)}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: (isIncreasing ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary)
-                        .withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    isIncreasing
-                        ? Icons.trending_up_rounded
-                        : Icons.trending_down_rounded,
-                    color: isIncreasing ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.tertiary,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 18),
-            Divider(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6).withValues(alpha: 0.08), height: 1),
-            const SizedBox(height: 18),
-
-            // Detailed Analysis Points
-            _insightRow(
-              icon: Icons.category_rounded,
-              color: Theme.of(context).colorScheme.primary,
-              text: _aiAnalysis!.highestCategory,
-            ),
-            const SizedBox(height: 12),
-            _insightRow(
-              icon: Icons.speed_rounded,
-              color: Theme.of(context).colorScheme.secondary,
-              text: _aiAnalysis!.weeklyTrend,
-            ),
-            const SizedBox(height: 12),
-            _insightRow(
-              icon: Icons.lightbulb_outline_rounded,
-              color: Colors.yellowAccent,
-              text: _aiAnalysis!.smartSuggestion,
-              isSuggestion: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _insightRow({
-    required IconData icon,
-    required Color color,
-    required String text,
-    bool isSuggestion = false,
-  }) {
-    if (text == "None" || text == "Stable") return const SizedBox();
-    
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 14),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: isSuggestion ? FontWeight.w600 : FontWeight.w500,
-              color: isSuggestion ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
   Widget _buildAdvancedDashboard() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

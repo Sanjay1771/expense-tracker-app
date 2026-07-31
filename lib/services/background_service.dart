@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'recurring_service.dart';
 
 // ────────────────────────────────────────────────────────────
@@ -27,8 +26,7 @@ void callbackDispatcher() {
     try {
       debugPrint('🔁 [Background] WorkManager task started: $taskName');
 
-      // ── 1. Initialize Firebase in background isolate ──
-      await Firebase.initializeApp();
+
 
       // ── 2. Get the logged-in user ID from SharedPreferences ──
       final prefs = await SharedPreferences.getInstance();

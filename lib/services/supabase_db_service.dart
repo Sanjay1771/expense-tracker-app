@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/transaction_model.dart';
+import 'budget_service.dart';
 
 class SupabaseDbService {
   static final SupabaseDbService _instance = SupabaseDbService._internal();
@@ -36,6 +37,9 @@ class SupabaseDbService {
             transaction.transactionDate.toIso8601String(),
       });
 
+      // Update Budget
+      await BudgetService().syncTransactionToBudget(transaction);
+
       debugPrint('[TRANSACTION] Insert successful');
     } catch (e) {
       throw Exception('Failed to add transaction: $e');
@@ -67,7 +71,7 @@ class SupabaseDbService {
   }
 
   /// Delete transaction by id
-  Future<bool> deleteTransaction(String id) async {
+  Future<bool> deleteTransaction(String id, {TransactionModel? deletedTxn}) async {
     final user = _currentUser;
     if (user == null) return false;
 
@@ -78,6 +82,12 @@ class SupabaseDbService {
           .delete()
           .eq('id', id)
           .eq('user_id', user.id);
+          
+      // Update Budget if the deleted transaction details are provided
+      if (deletedTxn != null) {
+        await BudgetService().syncTransactionToBudget(deletedTxn, oldTxn: deletedTxn);
+      }
+
       debugPrint('[TRANSACTION] Delete successful');
       return true;
     } catch (e) {
@@ -87,7 +97,7 @@ class SupabaseDbService {
   }
 
   /// Update transaction by id
-  Future<bool> updateTransaction(String id, TransactionModel transaction) async {
+  Future<bool> updateTransaction(String id, TransactionModel transaction, {TransactionModel? oldTxn}) async {
     final user = _currentUser;
     if (user == null) return false;
 
@@ -100,6 +110,10 @@ class SupabaseDbService {
         'description': transaction.description,
         'transaction_date': transaction.transactionDate.toIso8601String(),
       }).eq('id', id).eq('user_id', user.id);
+      
+      // Update Budget
+      await BudgetService().syncTransactionToBudget(transaction, oldTxn: oldTxn);
+      
       debugPrint('[TRANSACTION] Update successful');
       return true;
     } catch (e) {

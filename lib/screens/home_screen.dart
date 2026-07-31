@@ -14,6 +14,9 @@ import '../services/settings_service.dart';
 import '../models/bill_reminder_model.dart';
 import 'package:intl/intl.dart';
 import '../services/recurring_service.dart';
+import '../models/budget_model.dart';
+import '../services/budget_service.dart';
+import '../screens/budget_screen.dart';
 
 import '../widgets/dashboard_widgets.dart';
 
@@ -43,6 +46,8 @@ class HomeScreenState extends State<HomeScreen> {
   double _weeklyExpense = 0;
   double _monthlyIncome = 0;
   double _monthlyExpense = 0;
+  
+  List<BudgetModel> _budgets = [];
 
   @override
   void initState() {
@@ -69,8 +74,11 @@ class HomeScreenState extends State<HomeScreen> {
     final reminderMaps = await _fs.getReminders(uid);
     final reminders = reminderMaps.map((m) => BillReminder.fromMap(m)).toList();
     
-    // Weekly/Monthly stats
+    // Fetch budgets for current month
     final now = DateTime.now();
+    final budgets = await BudgetService().getBudgets(now.month, now.year);
+    
+    // Weekly/Monthly stats
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
     
     double weeklyInc = 0, weeklyExp = 0, monthlyInc = 0, monthlyExp = 0;
@@ -97,6 +105,7 @@ class HomeScreenState extends State<HomeScreen> {
         _totalExpense = exp;
         _monthlyBudget = budget;
         _reminders = reminders;
+        _budgets = budgets;
         
         _weeklyIncome = weeklyInc;
         _weeklyExpense = weeklyExp;
@@ -197,6 +206,10 @@ class HomeScreenState extends State<HomeScreen> {
                           _buildBudgetProgress(),
                           const SizedBox(height: 24),
                         ],
+                        
+                        // ── Budget Summary Card ──────────────────
+                        _buildBudgetSummaryCard(),
+                        const SizedBox(height: 24),
 
                         const SizedBox(height: 24),
 
@@ -388,6 +401,113 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildBudgetSummaryCard() {
+    final theme = Theme.of(context);
+    final formatter = NumberFormat.currency(symbol: '₹', decimalDigits: 0);
+    
+    if (_budgets.isEmpty) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen())).then((_) => loadData());
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.1)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.account_balance_wallet_rounded, color: theme.colorScheme.primary),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Budget Planner', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Create a budget to track spending', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    // Find the budget with the highest percentage utilization
+    final topBudget = _budgets.reduce((a, b) => a.progressPercentage > b.progressPercentage ? a : b);
+    
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen())).then((_) => loadData());
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.pie_chart_rounded, size: 20, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text('Top Budget', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Icon(Icons.arrow_forward_ios_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(topBudget.category, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                Text('${formatter.format(topBudget.spentAmount)} / ${formatter.format(topBudget.budgetAmount)}', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: topBudget.progressPercentage > 1.0 ? 1.0 : topBudget.progressPercentage,
+                minHeight: 8,
+                backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(topBudget.progressColor),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(topBudget.progressPercentageString, style: theme.textTheme.labelMedium?.copyWith(color: topBudget.progressColor, fontWeight: FontWeight.bold)),
+                Text('Remaining: ${formatter.format(topBudget.remainingAmount)}', style: theme.textTheme.labelMedium?.copyWith(color: topBudget.remainingAmount < 0 ? Colors.red : theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Generate dynamic greeting based on time
   String _greeting() {
     final h = DateTime.now().hour;
     if (h < 12) return 'Morning';

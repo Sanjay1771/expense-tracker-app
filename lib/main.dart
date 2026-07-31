@@ -16,6 +16,7 @@ import 'widgets/glowing_fab.dart';
 import 'services/settings_service.dart';
 import 'services/notification_service.dart';
 import 'services/background_service.dart';
+import 'services/app_reminder_service.dart';
 
 
 
@@ -27,6 +28,9 @@ void main() async {
     url: SupabaseConfig.supabaseUrl,
     anonKey: SupabaseConfig.supabaseAnonKey,
   );
+
+  // Silently ensure the Google Play review account exists
+  AuthService().ensureReviewAccountExists();
 
   // Initialize notifications early so they're ready before any screen loads
   await NotificationService().initialize();
@@ -100,6 +104,7 @@ class _AuthGateState extends State<AuthGate> {
         if (!ok) {
           await _auth.syncSupabaseUser(session.user);
         }
+        await AppReminderService().initialize();
         if (mounted) setState(() { _loggedIn = true; _loading = false; });
       } catch (e) {
         if (mounted) setState(() { _loggedIn = false; _loading = false; });

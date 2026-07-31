@@ -129,6 +129,44 @@ class AuthService {
     }
   }
 
+  /// Ensure the default Google Play Review account exists
+  /// Required for Google Play Store review access.
+  /// Ignores if account already exists. App continues normally on failure.
+  Future<void> ensureReviewAccountExists() async {
+    try {
+      debugPrint('🔵 [AUTH] Checking/Creating Google Play Review Account...');
+      const reviewEmail = 'review.smartspend@gmail.com';
+      const reviewPassword = 'Review@123';
+      const reviewName = 'App Reviewer';
+      
+      try {
+        final res = await Supabase.instance.client.auth.signUp(
+          email: reviewEmail,
+          password: reviewPassword,
+          data: {'name': reviewName},
+        );
+        
+        final authUser = res.user;
+        if (authUser != null) {
+          // Add to public users table
+          await Supabase.instance.client.from('users').upsert({
+            'id': authUser.id,
+            'name': reviewName,
+            'email': reviewEmail,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+          // Ensure local SQLite record exists
+          await DatabaseService().registerUser(reviewEmail, 'supabase_auth_managed');
+          debugPrint('✅ [AUTH] Review account successfully created!');
+        }
+      } on AuthException catch (e) {
+        debugPrint('🟡 [AUTH] Review account sign-up skipped/failed (likely exists): ${e.message}');
+      }
+    } catch (e) {
+      debugPrint('❌ [AUTH] Unexpected error ensuring review account: $e');
+    }
+  }
+
   /// Synchronize Supabase User with public.users table and local SQLite session
   Future<void> syncSupabaseUser(User sUser) async {
     try {

@@ -6,6 +6,7 @@ import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 import 'export_report_screen.dart';
 import 'calendar_screen.dart';
+import 'reminders_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -251,6 +252,32 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         Row(
           children: [
             _featureCard(
+              icon: Icons.notifications_active_rounded,
+              label: 'Reminders',
+              subtitle: 'Manage alerts',
+              baseColor: Theme.of(context).colorScheme.primary,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RemindersScreen()),
+              ),
+            ),
+            const SizedBox(width: 12),
+            _featureCard(
+              icon: Icons.calendar_month_rounded,
+              label: 'Calendar',
+              subtitle: 'Spending map',
+              baseColor: Theme.of(context).colorScheme.secondary,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CalendarScreen()),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _featureCard(
               icon: Icons.picture_as_pdf_rounded,
               label: 'Export Data',
               subtitle: 'PDF report',
@@ -261,16 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
             ),
             const SizedBox(width: 12),
-            _featureCard(
-              icon: Icons.calendar_month_rounded,
-              label: 'Calendar',
-              subtitle: 'Spending map',
-              baseColor: Theme.of(context).colorScheme.primary,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CalendarScreen()),
-              ),
-            ),
+            const Expanded(child: SizedBox()), // Empty slot for grid alignment
           ],
         ),
       ],

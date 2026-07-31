@@ -1,14 +1,15 @@
 // Reminder service for friend transactions (Legacy Firestore support)
 import 'package:flutter/foundation.dart';
 import '../models/friend_transaction_model.dart';
-import 'firestore_service.dart';
+import 'database_service.dart';
+
 
 class ReminderService {
   static final ReminderService _instance = ReminderService._internal();
   factory ReminderService() => _instance;
   ReminderService._internal();
 
-  final _fs = FirestoreService();
+  final _fs = DatabaseService();
 
   Future<void> scheduleFriendReminder(FriendTransactionModel tx) async {
     if (tx.id.isEmpty) return;
@@ -34,10 +35,10 @@ class ReminderService {
 
   Future<void> cancelFriendReminder(String docId) async {
     try {
-      final reminders = await _fs.getReminders();
+      final reminders = await _fs.getReminders(0);
       for (final r in reminders) {
         if (r['friendDocId'] == docId && r['id'] != null) {
-          await _fs.deleteReminder(r['id'] as String);
+          await _fs.deleteReminder(r['id'] as int);
           debugPrint('🔕 Friend reminder cancelled for doc: $docId');
         }
       }

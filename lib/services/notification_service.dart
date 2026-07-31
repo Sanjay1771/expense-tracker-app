@@ -17,10 +17,6 @@ class NotificationService {
     _initialized = true;
   }
 
-  /// Subscribe to the daily expense reminder topic
-  Future<void> _subscribeToReminders() async {
-    // Stubbed
-  }
 
   /// Unsubscribe from daily reminders
   Future<void> unsubscribeFromReminders() async {

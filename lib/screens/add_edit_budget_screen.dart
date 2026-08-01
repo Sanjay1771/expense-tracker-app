@@ -148,7 +148,7 @@ class _AddEditBudgetScreenState extends State<AddEditBudgetScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: _selectedMonth,
+                        initialValue: _selectedMonth,
                         decoration: InputDecoration(
                           labelText: 'Month',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
